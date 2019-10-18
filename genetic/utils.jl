@@ -166,3 +166,11 @@ function handleArgument(splitedData::Array{String,2})
         return "Undef", nothing
     end
 end
+
+function readSettingsFile(filename::String)
+    # Read config file and create config object
+
+    open(filename, "r") do file
+
+    end
+end
