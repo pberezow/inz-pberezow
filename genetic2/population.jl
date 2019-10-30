@@ -1,13 +1,16 @@
 """
 File contains Population struct, which represents population of chromosoms.
 Functions:
-    initPopulation(config::Config, maxGeneration::Int)
-    initPopulation(configFile::String, maxGeneration::Int)
-    nextGeneration!(self::Population)
+    - initPopulation(config::Config, maxGeneration::Int, costFunction::Function)
+    - selection(self::Population)
+    - nextGeneration!(self::Population)
+    - findSolution(population::Population)
 """
 
-# using Random
 
+"""
+    Structure used to represent population of Chromosoms.
+"""
 mutable struct Population
     config::Config
     currGeneration::Int
@@ -18,6 +21,16 @@ mutable struct Population
     costFunction::Function
 end
 
+"""
+    initPopulation(config, maxGeneration, costFunction)
+
+Initializes new population.
+
+# Arguments
+- `config::Config`: Config struct including all population's parameters.
+- `maxGeneration::Integer`: number of iterations before algorithm stops.
+- `costFunction::Function`: function used to calculate cost of single solution, should have signature func(resultMatrix::Array{Float64, 2}).
+"""
 function initPopulation(config::Config, maxGeneration::Int, costFunction::Function)
     validate!(config)
 
@@ -35,22 +48,7 @@ function initPopulation(config::Config, maxGeneration::Int, costFunction::Functi
 end
 
 """
-    initPopulation(configFile, maxGeneration, costFunction)
-
-Initializes new population from configuration file.
-
-# Arguments
-- `configFile::String`: path to the configuration file.
-- `maxGeneration::Integer`: number of iterations before algorithm stops.
-- `costFunction::Function`: function used to calculate cost of single solution, should have signature func(resultMatrix::Array{Float64, 2}).
-"""
-function initPopulation(configFile::String, maxGeneration::Int, costFunction::Function)
-    config = loadConfig(configFile)
-    return initPopulation(config, maxGeneration, costFunction)
-end
-
-"""
-Select chromosoms to reproduction.
+    Select chromosoms to reproduction.
 """
 function selection(self::Population)
     #1
@@ -89,6 +87,14 @@ function selection(self::Population)
     return parents
 end
 
+"""
+    nextGeneration!(self)
+
+Performs single iteration of genetic algorithm.
+
+# Arguments
+- `self::Population`: evolving population.
+"""
 function nextGeneration!(self::Population)
     # for testing purposes
     mutations = 0
@@ -136,14 +142,6 @@ function nextGeneration!(self::Population)
     # println("Generation: $(self.currGeneration)   Mutations: $(mutations) Crossovers: $(crossovers)   Best Solution: $(self.bestChromosom.cost)    Population Size: $(length(newChromosomeSet))")
 end
 
-"""
-    nextGeneration(self)
-
-Performs single iteration of genetic algorithm.
-
-# Arguments
-- `self::Population`: evolving population.
-"""
 function __nextGeneration!(self::Population)
     # NOT USED ANYMORE
     # for statistic purpose
@@ -182,20 +180,13 @@ function __nextGeneration!(self::Population)
     println("Generation: $(self.currGeneration)   Mutations: $(mutations) Crossovers: $(crossovers)   Best Solution: $(self.bestChromosom.cost)")
 end
 
+"""
+    Run's genetic algorithm on population.
+"""
 function findSolution(population::Population)
     while population.currGeneration < population.maxGeneration
         nextGeneration!(population)
     end
 
     return population.bestChromosom
-end
-
-function findSolution(config::Config, maxGenerations::Int, costFunction=false)
-    if costFunction
-        error("costFunction - not implemented yet.")
-    end
-
-    population = initPopulation(config, maxGenerations)
-
-    return findSolution(population)
 end

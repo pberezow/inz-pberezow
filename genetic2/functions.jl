@@ -5,6 +5,9 @@ Each function gets costMatrix + some additional parameters(optional)
     which can be use as costFunction in Population struct.
 """
 
+"""
+    Returns cost function used in linear transportation problem.
+"""
 function makeLinear(costMatrix::Array{Float64, 2})
 
     f = function(resultMatrix::Array{Float64, 2})

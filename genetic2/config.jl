@@ -6,6 +6,7 @@ File contains definition of Config struct used in Population struct to set param
             "mutationProb": <float>,
             "crossoverProb": <float>,
             "populationSize": <int>,
+            "eliteProc": <float>,
             "costMatrix": [
                 {
                     "d": <int>,
@@ -28,8 +29,11 @@ File contains definition of Config struct used in Population struct to set param
         }
 """
 
-# using JSON
-mutable struct Config
+
+"""
+    Structure used to store all population parameters.
+"""
+struct Config
     mutationProb::Float64 # [0,1]
     crossoverProb::Float64 # [0,1]
     populationSize::Int # > 1
@@ -40,6 +44,9 @@ mutable struct Config
     validated::Bool
 end
 
+"""
+    Validates config struct. (returns true if is valid, otherwise returns false)
+"""
 function validate!(self::Config)
     if self.validated
         return true
@@ -74,12 +81,18 @@ function validate!(self::Config)
     return true
 end
 
+"""
+    Initializes new config struct with values passed in arguments.
+"""
 function initConfig(mutationProb::Float64, crossoverProb::Float64, populationSize::Int, eliteProc::Float64, costMatrix::Array{Float64, 2}, demand::Vector{Float64}, supply::Vector{Float64})
     config = Config(mutationProb, crossoverProb, populationSize, eliteProc, costMatrix, demand, supply)
     validate!(config)
     return config
 end
 
+"""
+    Loads config struct from file.
+"""
 function loadConfig(filename::String)
     txt = ""
     open(filename, "r") do f
@@ -120,6 +133,9 @@ function loadConfig(filename::String)
     return config
 end
 
+"""
+    Saves config struct.
+"""
 function saveConfig(config::Config, filename::String)
     if !config.validated
         validate!(config)
