@@ -33,6 +33,7 @@ mutable struct Config
     mutationProb::Float64 # [0,1]
     crossoverProb::Float64 # [0,1]
     populationSize::Int # > 1
+    eliteProc::Float64 # % of best chromosoms which will be coppied to next generation
     costMatrix::Array{Float64, 2}
     demand::Vector{Float64}
     supply::Vector{Float64}
@@ -59,6 +60,11 @@ function validate!(self::Config)
         return false
     end
 
+    if self.eliteProc < 0.0 || self.eliteProc > 1.0
+        error("Wrong eliteProc value.")
+        return false
+    end
+
     if size(self.costMatrix) != (length(self.demand), length(self.supply))
         error("Wrong costMatrix size - $(size(self.costMatrix)). It must be length(demand) x length(supply) ($((length(self.demand), length(self.supply)))).")
         return false
@@ -68,8 +74,8 @@ function validate!(self::Config)
     return true
 end
 
-function initConfig(mutationProb::Float64, crossoverProb::Float64, populationSize::Int, costMatrix::Array{Float64, 2}, demand::Vector{Float64}, supply::Vector{Float64})
-    config = Config(mutationProb, crossoverProb, populationSize, costMatrix, demand, supply)
+function initConfig(mutationProb::Float64, crossoverProb::Float64, populationSize::Int, eliteProc::Float64, costMatrix::Array{Float64, 2}, demand::Vector{Float64}, supply::Vector{Float64})
+    config = Config(mutationProb, crossoverProb, populationSize, eliteProc, costMatrix, demand, supply)
     validate!(config)
     return config
 end
@@ -104,6 +110,7 @@ function loadConfig(filename::String)
     config = Config(configDict["mutationProb"],
                     configDict["crossoverProb"],
                     configDict["populationSize"],
+                    configDict["eliteProc"],
                     costMatrix,
                     demand,
                     supply,
@@ -122,7 +129,8 @@ function saveConfig(config::Config, filename::String)
     configDict["mutationProb"] = config.mutationProb
     configDict["crossoverProb"] = config.crossoverProb
     configDict["populationSize"] = config.populationSize
-    
+    configDict["eliteProc"] = config.eliteProc
+
     costMatrixList = Vector{Dict{String, Any}}(undef, length(config.costMatrix))
     idx = 1
     for i = 1 : size(config.costMatrix)[1]
@@ -164,10 +172,12 @@ function testSaveLoad()
     mutationProb = 0.1
     crossoverProb = 0.2
     populationSize = 100
+    eliteProc = 0.3
 
     config = Config(mutationProb, 
                     crossoverProb, 
                     populationSize,
+                    eliteProc,
                     costMatrix,
                     demand,
                     supply,
@@ -185,6 +195,9 @@ function testSaveLoad()
         error()
     end
     if config.populationSize != config2.populationSize
+        error()
+    end
+    if config.eliteProc != config2.eliteProc
         error()
     end
     if config.costMatrix != config2.costMatrix

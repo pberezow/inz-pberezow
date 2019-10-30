@@ -1,7 +1,8 @@
 {
     "populationSize": 100,
-    "mutationProb": 0.2,
-    "crossoverProb": 0.05,
+    "mutationProb": 0.05,
+    "crossoverProb": 0.9,
+    "eliteProc": 0.1,
     "demand": [
         {
             "val": 20.0,

@@ -85,7 +85,7 @@ end
 
 function mutate!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float64}, nDemand::Int=2, nSupply::Int=2)
     """
-    Perform mutation operator on Chromosom.
+    Perform mutation operator on Chromosom in place.
     nDemand and nSupply tells about size of newly initialized array(default 2x2).
     """
     self.isCalculated = false
@@ -143,6 +143,9 @@ function cross(self::Chromosom, other::Chromosom)
 end
 
 function cross!(self::Chromosom, other::Chromosom)
+    """
+    Perform crossover operator on 2 Chromosoms in place(creates 2 children and swaps them with parents).
+    """
     self.isCalculated = false
     other.isCalculated = false
 
@@ -158,6 +161,9 @@ function cross!(self::Chromosom, other::Chromosom)
 end
 
 function validate(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float64}, delta::Float64=0.0000000000001)
+    """
+    Check if chromosom fits as solution.
+    """
     for i = 1 : length(demand)
         sumVal = 0.0
         for j = 1 : length(supply)
