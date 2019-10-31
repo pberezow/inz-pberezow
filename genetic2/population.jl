@@ -19,6 +19,8 @@ mutable struct Population
     bestChromosom::Chromosom
     configFile::String
     costFunction::Function
+    # to plot results
+    bestsVector::Vector{Float64}
 end
 
 """
@@ -44,7 +46,11 @@ function initPopulation(config::Config, maxGeneration::Int, costFunction::Functi
     sort!(chromosomSet)
     bestChromosom = copy(chromosomSet[1])
 
-    return Population(config, 1, maxGeneration, chromosomSet, bestChromosom, "", costFunction)
+    # to draw plots
+    vec = Vector{Float64}()
+    push!(vec, getCost(bestChromosom, costFunction))
+
+    return Population(config, 1, maxGeneration, chromosomSet, bestChromosom, "", costFunction, vec)
 end
 
 """
@@ -136,9 +142,15 @@ function nextGeneration!(self::Population)
     end
     sort!(newChromosomeSet)
     self.chromosomSet = newChromosomeSet
-    self.bestChromosom = copy(self.chromosomSet[1])
+    # swap only if better than current best?
+    if getCost(self.bestChromosom, self.costFunction) > getCost(self.chromosomSet[1], self.costFunction)
+        self.bestChromosom = copy(self.chromosomSet[1])
+    end
 
     self.currGeneration += 1
+    
+    push!(self.bestsVector, getCost(self.bestChromosom, self.costFunction))
+
     # println("Generation: $(self.currGeneration)   Mutations: $(mutations) Crossovers: $(crossovers)   Best Solution: $(self.bestChromosom.cost)    Population Size: $(length(newChromosomeSet))")
 end
 
@@ -189,4 +201,22 @@ function findSolution(population::Population)
     end
 
     return population.bestChromosom
+end
+
+function drawResults(self::Population, filename::String, runNumber::Int=-1)
+    if self.currGeneration != self.maxGeneration
+        println("You have to evolve population first!")
+        return false
+    end
+
+    title = "mutProb: $(self.config.mutationProb), crossProb: $(self.config.crossoverProb), elite: $(self.config.eliteProc), popSize: $(self.config.populationSize), maxGen: $(self.maxGeneration)"
+    if runNumber > 0
+        title = "($runNumber)  " * title
+    end
+    xlabel = "Generation"
+    ylabel = "Best cost"
+    plt = plot(1:self.maxGeneration, self.bestsVector, title=title, xlabel=xlabel, ylabel=ylabel, show=false)
+    savefig(plt, filename)
+
+    return true
 end

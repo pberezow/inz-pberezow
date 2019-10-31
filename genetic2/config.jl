@@ -33,7 +33,7 @@ File contains definition of Config struct used in Population struct to set param
 """
     Structure used to store all population parameters.
 """
-struct Config
+mutable struct Config
     mutationProb::Float64 # [0,1]
     crossoverProb::Float64 # [0,1]
     populationSize::Int # > 1
