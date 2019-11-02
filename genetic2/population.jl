@@ -214,9 +214,22 @@ function drawResults(self::Population, filename::String, runNumber::Int=-1)
         title = "($runNumber)  " * title
     end
     xlabel = "Generation"
-    ylabel = "Best cost"
-    plt = plot(1:self.maxGeneration, self.bestsVector, title=title, xlabel=xlabel, ylabel=ylabel, show=false)
-    savefig(plt, filename)
+    ylabel = "Cost of best chromosom"
 
+    ioff()
+    fig = PyPlot.figure(title, figsize=(12, 12))
+    ax = PyPlot.axes()
+    plt = plot(1:self.maxGeneration, self.bestsVector)
+    grid(true)
+    PyPlot.xlabel(xlabel)
+    PyPlot.ylabel(ylabel)
+    PyPlot.title(title)
+    # fig.canvas.draw()
+    
+    fig.savefig(filename)
+    clf()
+    close(fig)
+    # sleep(1)
+    
     return true
 end

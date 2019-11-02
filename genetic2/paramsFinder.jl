@@ -6,9 +6,9 @@ costFunc = Genetic.makeA(2.0, config.costMatrix)
 
 # params
 popSize = 100 : 100 : 500
-maxGen = 100 : 100 : 2000
-crossProb = 0.4 : 0.1 : 0.8
-mutProb = 0.01 : 0.03 : 0.15
+maxGen = 100 : 200 : 2100
+crossProb = 0.5 : 0.1 : 0.8
+mutProb = 0.01 : 0.02 : 0.11
 elite = 0.05 : 0.05 : 0.2
 
 # popSize = 100 : 50 : 150
@@ -18,6 +18,11 @@ elite = 0.05 : 0.05 : 0.2
 # elite = 0.05 : 0.05 : 0.1
 
 runs = 1:10
+
+allTests = length(popSize) * length(maxGen) * length(crossProb) * length(mutProb) * length(elite) * length(runs)
+doneRuns = 0
+
+best_results = Vector{Tuple{Float64, String}}()
 
 if !isdir("results")
     mkdir("results")
@@ -39,15 +44,31 @@ for pS in popSize
                         mkdir(path)
                     end
                     cd(path)
+
                     for run in runs
                         population = Genetic.initPopulation(config, mG, costFunc)
                         Genetic.findSolution(population)
-                        filename = "r_$(run)___res_$(population.bestChromosom.cost)"
+                        filename = "r_$(run)___res_$(population.bestChromosom.cost).png"
                         Genetic.drawResults(population, filename, run)
+
+                        push!(best_results, (Genetic.getCost(population.bestChromosom, population.costFunction), path))
                     end
+                    
                     cd("..")
+                    global doneRuns += length(runs)
+                    println("Runs Done: $(doneRuns) / $(allTests)    ($(doneRuns/allTests))")
                 end
+
+                sort!(best_results)
+                global best_results = best_results[1:40]
             end
         end
     end
+end
+
+println(best_results)
+println("\n\n")
+
+for run in best_results
+    println(run)
 end
