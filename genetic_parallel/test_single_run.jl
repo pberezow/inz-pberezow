@@ -1,17 +1,23 @@
 Genetic = include("geneticPackage.jl")
+using BenchmarkTools
 
 task_config_path = "zadanie_testowe7x7_237.json"
-max_gen = 2000
+max_gen = 600
 config = Genetic.loadConfig(task_config_path)
 # linear
 # cost_func = Genetic.makeLinear(config.costMatrix)
 # nonlinear
 cost_func = Genetic.makeA(2.0, config.costMatrix)
 
+@btime begin
+    population = Genetic.initPopulation(config, max_gen, cost_func)
+    Genetic.findSolution(population)
+end
 
-@time population = Genetic.initPopulation(config, max_gen, cost_func)
+
+population = Genetic.initPopulation(config, max_gen, cost_func)
 firstBest = copy(population.bestChromosom)
-@time Genetic.findSolution(population)
+Genetic.findSolution(population)
 lastBest = copy(population.bestChromosom)
 
 println("Result:")

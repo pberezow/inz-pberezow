@@ -229,7 +229,6 @@ function drawResults(self::Population, filename::String, runNumber::Int=-1)
     fig.savefig(filename)
     clf()
     close(fig)
-    # sleep(1)
     
     return true
 end

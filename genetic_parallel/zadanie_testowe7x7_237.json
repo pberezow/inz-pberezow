@@ -1,5 +1,5 @@
 {
-    "populationSize": 1000,
+    "populationSize": 100,
     "mutationProb": 0.05,
     "crossoverProb": 0.9,
     "eliteProc": 0.1,

@@ -19,9 +19,9 @@ mutable struct Population
     bestChromosom::Chromosom
     configFile::String
     costFunction::Function
-    # to plot results
-    bestsVector::Vector{Float64}
+    bestsVector::Vector{Float64} # to plot results
     isTestRun::Bool
+    mutex::Threads.SpinLock
 end
 
 """
@@ -37,11 +37,14 @@ Initializes new population.
 function initPopulation(config::Config, maxGeneration::Int, costFunction::Function, isTestRun::Bool=false)
     validate!(config)
 
-    chromosomSet = Vector{Chromosom}(undef, config.populationSize)
+    chromosomSet = Vector{Chromosom}()
+    mutex = Threads.SpinLock()
     Threads.@threads for i = 1 : config.populationSize
         c = init(config.demand, config.supply)
         eval!(c, costFunction)
-        chromosomSet[i] = c
+        lock(mutex)
+        push!(chromosomSet, c)
+        unlock(mutex)
     end
 
     # TODO: swap to multi threaded merge sort
@@ -54,7 +57,7 @@ function initPopulation(config::Config, maxGeneration::Int, costFunction::Functi
         push!(vec, getCost(bestChromosom, costFunction))
     end
 
-    return Population(config, 1, maxGeneration, chromosomSet, bestChromosom, "", costFunction, vec, isTestRun)
+    return Population(config, 1, maxGeneration, chromosomSet, bestChromosom, "", costFunction, vec, isTestRun, mutex)
 end
 
 """
@@ -107,52 +110,39 @@ Performs single iteration of genetic algorithm.
 """
 function nextGeneration!(self::Population)
     # DONE
-    # for testing purposes
-    # mutations = 0
-    # crossovers = 0
 
     parents = selection(self)
     
     # crossovers on parents
-    # newChromosomeSet = []
-    newChromosomeSet = Vector{Chromosom}(undef, self.config.populationSize)
+    newChromosomeSet = Vector{Chromosom}()
     Threads.@threads for i = 1 : 2 : length(parents)
         c1, c2 = cross(parents[i], parents[i+1])
-        newChromosomeSet[i] = c1
-        newChromosomeSet[i+1] = c2
-        # push!(newChromosomeSet, c1)
-        # push!(newChromosomeSet, c2)
-        # crossovers += 1
+        lock(self.mutex)
+        push!(newChromosomeSet, c1)
+        push!(newChromosomeSet, c2)
+        unlock(self.mutex)
     end
 
-    idx = length(parents)
     # copy eliteProc
     eliteCount = floor(Int, self.config.populationSize * self.config.eliteProc)
-    Threads.@threads for i = 1 : eliteCount
-        newChromosomeSet[idx+i] = copy(self.chromosomSet[i])
-        # push!(newChromosomeSet, copy(self.chromosomSet[i]))
+    for i = 1 : eliteCount
+        push!(newChromosomeSet, copy(self.chromosomSet[i]))
     end
-    idx += eliteCount
 
     # add extra random chromosoms from prev generation
-    Threads.@threads for i = idx + 1 : self.config.populationSize
+    for i = length(newChromosomeSet)+1 : self.config.populationSize
         selected_idx = rand(eliteCount+1 : self.config.populationSize)
-        newChromosomeSet[i] = copy(self.chromosomSet[selected_idx])
-        # push!(newChromosomeSet, copy(self.chromosomSet[idx]))
+        push!(newChromosomeSet, copy(self.chromosomSet[idx]))
     end
 
-    # mutations
-    Threads.@threads for i = 1 : self.config.populationSize
-        if rand() <= self.config.mutationProb
-            mutate!(newChromosomeSet[i], self.config.demand, self.config.supply)
-            # mutations += 1
-        end
-    end
-
-    # takes more time than single threaded?
+    # mutations + evaluation
     Threads.@threads for c in newChromosomeSet
+        if rand() <= self.config.mutationProb
+            mutate!(c, self.config.demand, self.config.supply)
+        end
         eval!(c, self.costFunction)
     end
+
     # TODO: swap to merge sort
     sort!(newChromosomeSet)
     self.chromosomSet = newChromosomeSet
@@ -162,8 +152,6 @@ function nextGeneration!(self::Population)
     end
 
     self.currGeneration += 1
-    
-    # println("Generation: $(self.currGeneration)   Mutations: $(mutations) Crossovers: $(crossovers)   Best Solution: $(self.bestChromosom.cost)    Population Size: $(length(newChromosomeSet))")
 end
 
 function nextGenerationTest!(self::Population)
@@ -267,7 +255,6 @@ function drawResults(self::Population, filename::String, runNumber::Int=-1)
     fig.savefig(filename)
     clf()
     close(fig)
-    # sleep(1)
     
     return true
 end
