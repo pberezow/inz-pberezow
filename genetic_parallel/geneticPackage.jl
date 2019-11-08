@@ -2,7 +2,7 @@ module GeneticNTP
 
     using Random
     using JSON
-    using PyPlot
+    # using PyPlot
 
     export Chromosom, getCost, init, validate, validate!, eval!, mutate, mutate!, cross, cross!, 
         Population, initPopulation, nextGeneration!, findSolution, 

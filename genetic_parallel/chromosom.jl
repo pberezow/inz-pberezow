@@ -70,11 +70,11 @@ end
     Initialization of chromosom's result Array. (it is also useed is mutation operator)
 """
 function initArray(demand::Vector{Float64}, supply::Vector{Float64})
-    result = zeros(Float64, length(demand), length(supply))
+    result = Array{Float64, 2}(undef, length(demand), length(supply))
 
     indices = collect(1 : length(demand)*length(supply))
     shuffle!(indices)
-    for idx in indices
+    @simd for idx in indices
         d = div((idx-1), length(supply)) + 1
         s = (idx-1) % length(supply) + 1
         val = min(demand[d], supply[s])
@@ -92,7 +92,7 @@ end
 function eval!(self::Chromosom, costFunc::Function)
     self.cost = costFunc(self.result)
     self.isCalculated = true
-    return self
+    return nothing
 end
 
 """
@@ -119,20 +119,20 @@ function mutate!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float6
     shuffle!(supplyPerm)
     supplyPerm = supplyPerm[1:nSupply]
 
-    partialDemand = zeros(Float64, nDemand)
-    partialSupply = zeros(Float64, nSupply)
+    partialDemand = Vector{Float64}(undef, nDemand)
+    partialSupply = Vector{Float64}(undef, nSupply)
 
-    for i = 1 : nDemand
+    @simd for i = 1 : nDemand
         val = 0.0
-        for j in supplyPerm
+        @simd for j in supplyPerm
             val += self.result[demandPerm[i], j]
         end
         partialDemand[i] = val
     end
     
-    for i = 1 : nSupply
+    @simd for i = 1 : nSupply
         val = 0.0
-        for j in demandPerm
+        @simd for j in demandPerm
             val += self.result[j, supplyPerm[i]]
         end
         partialSupply[i] = val
@@ -140,20 +140,20 @@ function mutate!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float6
 
     partialResult = initArray(partialDemand, partialSupply)
 
-    for i = 1 : nDemand
-        for j = 1 : nSupply
+    @simd for i = 1 : nDemand
+        @simd for j = 1 : nSupply
             self.result[demandPerm[i], supplyPerm[j]] = partialResult[i, j]
         end
     end
 
     # to drop later
-    if !validate(self, demand, supply)
-        println("Result array after mutation:")
-        println(self.result)
-        error("Error while performing mutation.")
-    end
+    # if !validate(self, demand, supply)
+    #     println("Result array after mutation:")
+    #     println(self.result)
+    #     error("Error while performing mutation.")
+    # end
 
-    return self
+    return nothing
 end
 
 """
@@ -172,15 +172,17 @@ end
 function cross!(self::Chromosom, other::Chromosom)
     self.isCalculated = false
     other.isCalculated = false
+    X = Array{Float64, 2}(undef, size(self.result))
+    Y = Array{Float64, 2}(undef, size(self.result))
 
     c1 = rand()
     c2 = 1.0 - c1
-    X = c1 * self.result + c2 * other.result
-    Y = c1 * other.result + c2 * self.result
+    @. X = c1 * self.result + c2 * other.result
+    @. Y = c1 * other.result + c2 * self.result
     self.result = X
     other.result = Y
 
-    return self, other
+    return nothing
     
 end
 
@@ -188,9 +190,9 @@ end
     Check if chromosom fits as solution.
 """
 function validate(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float64}, delta::Float64=0.0000000000001)
-    for i = 1 : length(demand)
+    @simd for i = 1 : length(demand)
         sumVal = 0.0
-        for j = 1 : length(supply)
+        @simd for j = 1 : length(supply)
             sumVal += self.result[i, j]
         end
         if abs(demand[i] - sumVal) > delta
@@ -199,9 +201,9 @@ function validate(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float
         end
     end
 
-    for j = 1 : length(supply)
+    @simd for j = 1 : length(supply)
         sumVal = 0.0
-        for i = 1 : length(demand)
+        @simd for i = 1 : length(demand)
             sumVal += self.result[i, j]
         end
         if abs(supply[j] - sumVal) > delta

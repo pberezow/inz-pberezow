@@ -21,7 +21,7 @@ mutable struct Population
     costFunction::Function
     bestsVector::Vector{Float64} # to plot results
     isTestRun::Bool
-    mutex::Threads.SpinLock
+    mutex::Threads.Mutex
 end
 
 """
@@ -38,13 +38,15 @@ function initPopulation(config::Config, maxGeneration::Int, costFunction::Functi
     validate!(config)
 
     chromosomSet = Vector{Chromosom}()
-    mutex = Threads.SpinLock()
+    mutex = Threads.Mutex()
     Threads.@threads for i = 1 : config.populationSize
         c = init(config.demand, config.supply)
         eval!(c, costFunction)
         lock(mutex)
         push!(chromosomSet, c)
         unlock(mutex)
+        # println("Done - chromosom $i -- Thread: $(Threads.threadid())")
+        # chromosomSet[i] = c
     end
 
     # TODO: swap to multi threaded merge sort
@@ -65,26 +67,23 @@ end
 """
 function selection(self::Population)
     #1
-    fittnessSum = 0.0
-    fittness = []
-    for i = 1 : length(self.chromosomSet)
-        f = getCost(self.chromosomSet[i], self.costFunction)
-        push!(fittness, f)
-        fittnessSum += f
+    fittness = Vector{Float64}(undef, length(self.chromosomSet))
+    
+    fittness[length(self.chromosomSet)] = getCost(self.chromosomSet[length(self.chromosomSet)], self.costFunction)
+    for i = length(self.chromosomSet)-1 : -1 : 1
+        fittness[i] = getCost(self.chromosomSet[i], self.costFunction) + fittness[i+1]
     end
 
     #2
-    fittness[1] = fittness[1] / fittnessSum
-    for i = 2 : length(fittness)
-        fittness[i] = fittness[i] / fittnessSum + fittness[i-1]
-    end
+    fittness ./= fittness[1]
 
     #3
-    parents = []
     parentsToPick = floor(Int, self.config.populationSize * self.config.crossoverProb)
     if parentsToPick % 2 == 1
         parentsToPick += 1
     end
+    parents = Vector{Chromosom}(undef, parentsToPick)
+
     # println(fittness)
     for i = 1 : parentsToPick
         # add binarySearch
@@ -94,7 +93,7 @@ function selection(self::Population)
         if idx === nothing
             idx = 1
         end
-        push!(parents, copy(self.chromosomSet[idx]))
+        parents[i] = copy(self.chromosomSet[idx])
     end
 
     return parents
@@ -114,25 +113,26 @@ function nextGeneration!(self::Population)
     parents = selection(self)
     
     # crossovers on parents
-    newChromosomeSet = Vector{Chromosom}()
+    newChromosomeSet = Vector{Chromosom}(undef, length(self.chromosomSet))
     Threads.@threads for i = 1 : 2 : length(parents)
-        c1, c2 = cross(parents[i], parents[i+1])
-        lock(self.mutex)
-        push!(newChromosomeSet, c1)
-        push!(newChromosomeSet, c2)
-        unlock(self.mutex)
+        cross!(parents[i], parents[i+1])
+        newChromosomeSet[i] = parents[i]
+        newChromosomeSet[i+1] = parents[i+1]
     end
+    lastIdx = length(parents)
 
     # copy eliteProc
     eliteCount = floor(Int, self.config.populationSize * self.config.eliteProc)
     for i = 1 : eliteCount
-        push!(newChromosomeSet, copy(self.chromosomSet[i]))
+        newChromosomeSet[lastIdx+=1] = self.chromosomSet[i]
     end
+    lastIdx += 1
 
     # add extra random chromosoms from prev generation
-    for i = length(newChromosomeSet)+1 : self.config.populationSize
+    for i = lastIdx : self.config.populationSize
         selected_idx = rand(eliteCount+1 : self.config.populationSize)
-        push!(newChromosomeSet, copy(self.chromosomSet[idx]))
+        # .= instead of copy()
+        newChromosomeSet[i] = copy(self.chromosomSet[selected_idx])
     end
 
     # mutations + evaluation
@@ -152,6 +152,7 @@ function nextGeneration!(self::Population)
     end
 
     self.currGeneration += 1
+    return nothing
 end
 
 function nextGenerationTest!(self::Population)

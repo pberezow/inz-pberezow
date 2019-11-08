@@ -1,5 +1,5 @@
 {
-    "populationSize": 500,
+    "populationSize": 1000,
     "demand": [
         {
             "val": 17.761989342806395,

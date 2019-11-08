@@ -147,11 +147,11 @@ function mutate!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float6
     end
 
     # to drop later
-    if !validate(self, demand, supply)
-        println("Result array after mutation:")
-        println(self.result)
-        error("Error while performing mutation.")
-    end
+    # if !validate(self, demand, supply)
+    #     println("Result array after mutation:")
+    #     println(self.result)
+    #     error("Error while performing mutation.")
+    # end
 
     return self
 end
