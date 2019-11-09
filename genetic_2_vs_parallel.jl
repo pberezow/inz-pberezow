@@ -1,15 +1,15 @@
 using Base.Threads
-using Distributed
+# using Distributed
 # addprocs(5 - nprocs())
 
-@everywhere Genetic2 = include("genetic2/geneticPackage.jl")
-@everywhere GeneticParallel = include("genetic_parallel/geneticPackage.jl")
+Genetic2 = include("genetic2/geneticPackage.jl")
+GeneticParallel = include("genetic_parallel/geneticPackage.jl")
 using BenchmarkTools
 
 
-# task_config_path = "genetic_parallel/zadanie_testowe7x7_237.json"
-task_config_path = "testData_100x100.json"
-max_gen = 50
+task_config_path = "genetic_parallel/zadanie_testowe7x7_237.json"
+# task_config_path = "testData_100x100.json"
+max_gen = 500
 config = Genetic2.loadConfig(task_config_path)
 config2 = GeneticParallel.loadConfig(task_config_path)
 
@@ -22,31 +22,29 @@ cost_func = Genetic2.makeA(2.0, config.costMatrix)
 function genetic2_test(config, max_gen, cost_func)
     population = Genetic2.initPopulation(config, max_gen, cost_func)
     Genetic2.findSolution(population)
-    nothing
 end
 
 function genetic_parallel_test(config2, max_gen, cost_func)
     population = GeneticParallel.initPopulation(config2, max_gen, cost_func)
     GeneticParallel.findSolution(population)
-    nothing
 end
 
-@everywhere function run(config, max_gen, cost_func)
+function run(config, max_gen, cost_func)
     population = Genetic2.initPopulation(config, max_gen, cost_func)
     Genetic2.findSolution(population)
 end
 
-@everywhere function run2(config2, max_gen, cost_func)
-    println(Threads.nthreads())
+function run2(config2, max_gen, cost_func)
+    # println(Threads.nthreads())
     population = GeneticParallel.initPopulation(config2, max_gen, cost_func)
     GeneticParallel.findSolution(population)
 end
 
 function genetic2_parallel_test(config, max_gen, cost_func)
-    println(nprocs())
+    # println(nprocs())
     futures = []
-    for i = 1 : nprocs()
-        fut = @spawn run(config, max_gen, cost_func)
+    for i = 1 : Threads.nthreads()
+        fut = Threads.@spawn run(config, max_gen, cost_func)
         push!(futures, fut)
     end
     res = []
@@ -57,10 +55,10 @@ function genetic2_parallel_test(config, max_gen, cost_func)
 end
 
 function genetic_parallel2_test(config2, max_gen, cost_func)
-    println(nprocs())
+    # println(nprocs())
     futures = []
-    for i = 1 : nprocs()
-        fut = @spawn run2(confixg2, max_gen, cost_func)
+    for i = 1 : Threads.nthreads()
+        fut = Threads.@spawn run2(config2, max_gen, cost_func)
         push!(futures, fut)
     end
     res = []

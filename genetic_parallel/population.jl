@@ -21,7 +21,7 @@ mutable struct Population
     costFunction::Function
     bestsVector::Vector{Float64} # to plot results
     isTestRun::Bool
-    mutex::Threads.Mutex
+    mutex::ReentrantLock
 end
 
 """
@@ -38,7 +38,7 @@ function initPopulation(config::Config, maxGeneration::Int, costFunction::Functi
     validate!(config)
 
     chromosomSet = Vector{Chromosom}()
-    mutex = Threads.Mutex()
+    mutex = ReentrantLock()
     Threads.@threads for i = 1 : config.populationSize
         c = init(config.demand, config.supply)
         eval!(c, costFunction)

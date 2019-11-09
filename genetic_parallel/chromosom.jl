@@ -74,7 +74,7 @@ function initArray(demand::Vector{Float64}, supply::Vector{Float64})
 
     indices = collect(1 : length(demand)*length(supply))
     shuffle!(indices)
-    @simd for idx in indices
+    for idx in indices
         d = div((idx-1), length(supply)) + 1
         s = (idx-1) % length(supply) + 1
         val = min(demand[d], supply[s])
@@ -122,17 +122,17 @@ function mutate!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float6
     partialDemand = Vector{Float64}(undef, nDemand)
     partialSupply = Vector{Float64}(undef, nSupply)
 
-    @simd for i = 1 : nDemand
+    for i = 1 : nDemand
         val = 0.0
-        @simd for j in supplyPerm
+        for j in supplyPerm
             val += self.result[demandPerm[i], j]
         end
         partialDemand[i] = val
     end
     
-    @simd for i = 1 : nSupply
+    for i = 1 : nSupply
         val = 0.0
-        @simd for j in demandPerm
+        for j in demandPerm
             val += self.result[j, supplyPerm[i]]
         end
         partialSupply[i] = val
@@ -140,8 +140,8 @@ function mutate!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float6
 
     partialResult = initArray(partialDemand, partialSupply)
 
-    @simd for i = 1 : nDemand
-        @simd for j = 1 : nSupply
+    for i = 1 : nDemand
+        for j = 1 : nSupply
             self.result[demandPerm[i], supplyPerm[j]] = partialResult[i, j]
         end
     end
@@ -190,9 +190,9 @@ end
     Check if chromosom fits as solution.
 """
 function validate(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float64}, delta::Float64=0.0000000000001)
-    @simd for i = 1 : length(demand)
+    for i = 1 : length(demand)
         sumVal = 0.0
-        @simd for j = 1 : length(supply)
+        for j = 1 : length(supply)
             sumVal += self.result[i, j]
         end
         if abs(demand[i] - sumVal) > delta
@@ -201,9 +201,9 @@ function validate(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float
         end
     end
 
-    @simd for j = 1 : length(supply)
+    for j = 1 : length(supply)
         sumVal = 0.0
-        @simd for i = 1 : length(demand)
+        for i = 1 : length(demand)
             sumVal += self.result[i, j]
         end
         if abs(supply[j] - sumVal) > delta
