@@ -45,8 +45,6 @@ function initPopulation(config::Config, maxGeneration::Int, costFunction::Functi
         lock(mutex)
         push!(chromosomSet, c)
         unlock(mutex)
-        # println("Done - chromosom $i -- Thread: $(Threads.threadid())")
-        # chromosomSet[i] = c
     end
 
     # TODO: swap to multi threaded merge sort
@@ -89,7 +87,7 @@ function selection(self::Population)
         # add binarySearch
         pick = rand()
         # println(pick)
-        idx = findlast(x -> x <= pick, fittness)
+        idx = findfirst(x -> x <= pick, fittness)
         if idx === nothing
             idx = 1
         end
@@ -131,7 +129,6 @@ function nextGeneration!(self::Population)
     # add extra random chromosoms from prev generation
     for i = lastIdx : self.config.populationSize
         selected_idx = rand(eliteCount+1 : self.config.populationSize)
-        # .= instead of copy()
         newChromosomeSet[i] = copy(self.chromosomSet[selected_idx])
     end
 

@@ -92,7 +92,7 @@ end
 function eval!(self::Chromosom, costFunc::Function)
     self.cost = costFunc(self.result)
     self.isCalculated = true
-    return self
+    return nothing
 end
 
 """
@@ -119,8 +119,8 @@ function mutate!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float6
     shuffle!(supplyPerm)
     supplyPerm = supplyPerm[1:nSupply]
 
-    partialDemand = zeros(Float64, nDemand)
-    partialSupply = zeros(Float64, nSupply)
+    partialDemand = Vector{Float64}(undef, nDemand)
+    partialSupply = Vector{Float64}(undef, nSupply)
 
     for i = 1 : nDemand
         val = 0.0
@@ -153,7 +153,7 @@ function mutate!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float6
     #     error("Error while performing mutation.")
     # end
 
-    return self
+    return nothing
 end
 
 """
@@ -172,15 +172,17 @@ end
 function cross!(self::Chromosom, other::Chromosom)
     self.isCalculated = false
     other.isCalculated = false
+    X = Array{Float64, 2}(undef, size(self.result))
+    Y = Array{Float64, 2}(undef, size(self.result))
 
     c1 = rand()
     c2 = 1.0 - c1
-    X = c1 * self.result + c2 * other.result
-    Y = c1 * other.result + c2 * self.result
+    @. X = c1 * self.result + c2 * other.result
+    @. Y = c1 * other.result + c2 * self.result
     self.result = X
     other.result = Y
 
-    return self, other
+    return nothing
     
 end
 

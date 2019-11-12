@@ -21,6 +21,7 @@ mutable struct Population
     costFunction::Function
     # to plot results
     bestsVector::Vector{Float64}
+    isTestRun::Bool
 end
 
 """
@@ -33,7 +34,7 @@ Initializes new population.
 - `maxGeneration::Integer`: number of iterations before algorithm stops.
 - `costFunction::Function`: function used to calculate cost of single solution, should have signature func(resultMatrix::Array{Float64, 2}).
 """
-function initPopulation(config::Config, maxGeneration::Int, costFunction::Function)
+function initPopulation(config::Config, maxGeneration::Int, costFunction::Function, isTestRun::Bool=false)
     validate!(config)
 
     chromosomSet = Vector{Chromosom}()
@@ -48,9 +49,11 @@ function initPopulation(config::Config, maxGeneration::Int, costFunction::Functi
 
     # to draw plots
     vec = Vector{Float64}()
-    push!(vec, getCost(bestChromosom, costFunction))
+    if isTestRun
+        push!(vec, getCost(bestChromosom, costFunction))
+    end
 
-    return Population(config, 1, maxGeneration, chromosomSet, bestChromosom, "", costFunction, vec)
+    return Population(config, 1, maxGeneration, chromosomSet, bestChromosom, "", costFunction, vec, isTestRun)
 end
 
 """
@@ -58,36 +61,33 @@ end
 """
 function selection(self::Population)
     #1
-    fittnessSum = 0.0
-    fittness = []
-    for i = 1 : length(self.chromosomSet)
-        f = getCost(self.chromosomSet[i], self.costFunction)
-        push!(fittness, f)
-        fittnessSum += f
+    fittness = Vector{Float64}(undef, length(self.chromosomSet))
+
+    fittness[length(self.chromosomSet)] = getCost(self.chromosomSet[length(self.chromosomSet)], self.costFunction)
+    for i = length(self.chromosomSet)-1 : -1 : 1
+        fittness[i] = getCost(self.chromosomSet[i], self.costFunction) + fittness[i+1]
     end
 
     #2
-    fittness[1] = fittness[1] / fittnessSum
-    for i = 2 : length(fittness)
-        fittness[i] = fittness[i] / fittnessSum + fittness[i-1]
-    end
+    fittness ./= fittness[1]
 
     #3
-    parents = []
     parentsToPick = floor(Int, self.config.populationSize * self.config.crossoverProb)
     if parentsToPick % 2 == 1
         parentsToPick += 1
     end
+    parents = Vector{Chromosom}(undef, parentsToPick)
+
     # println(fittness)
     for i = 1 : parentsToPick
         # add binarySearch
         pick = rand()
         # println(pick)
-        idx = findlast(x -> x <= pick, fittness)
+        idx = findfirst(x -> x <= pick, fittness)
         if idx === nothing
             idx = 1
         end
-        push!(parents, copy(self.chromosomSet[idx]))
+        parents[i] = copy(self.chromosomSet[idx])
     end
 
     return parents
@@ -102,6 +102,53 @@ Performs single iteration of genetic algorithm.
 - `self::Population`: evolving population.
 """
 function nextGeneration!(self::Population)
+    parents = selection(self)
+    
+    # crossovers on parents
+    newChromosomeSet = Vector{Chromosom}(undef, length(self.chromosomSet))
+    for i = 1 : 2 : length(parents)
+        cross!(parents[i], parents[i+1])
+        newChromosomeSet[i] = parents[i]
+        newChromosomeSet[i+1] = parents[i+1]
+    end
+    lastIdx = length(parents)
+
+    # copy eliteProc
+    eliteCount = floor(Int, self.config.populationSize * self.config.eliteProc)
+    for i = 1 : eliteCount
+        newChromosomeSet[lastIdx+=1] = self.chromosomSet[i]
+    end
+    lastIdx += 1
+
+    # add extra random chromosoms from prev generation
+    for i = lastIdx : self.config.populationSize
+        selected_idx = rand(eliteCount+1 : self.config.populationSize)
+        newChromosomeSet[i] = copy(self.chromosomSet[selected_idx])
+    end
+
+    # mutations + evaluation
+    for c in newChromosomeSet
+        if rand() <= self.config.mutationProb
+            mutate!(c, self.config.demand, self.config.supply)
+        end
+        eval!(c, self.costFunction)
+    end
+
+    sort!(newChromosomeSet)
+    self.chromosomSet = newChromosomeSet
+    # swap only if better than current best?
+    if getCost(self.bestChromosom, self.costFunction) > getCost(self.chromosomSet[1], self.costFunction)
+        self.bestChromosom = copy(self.chromosomSet[1])
+    end
+
+    self.currGeneration += 1
+    
+    push!(self.bestsVector, getCost(self.bestChromosom, self.costFunction))
+
+    # println("Generation: $(self.currGeneration)   Mutations: $(mutations) Crossovers: $(crossovers)   Best Solution: $(self.bestChromosom.cost)    Population Size: $(length(newChromosomeSet))")
+end
+
+function nextGenerationTest!(self::Population)
     # for testing purposes
     mutations = 0
     crossovers = 0
@@ -154,50 +201,18 @@ function nextGeneration!(self::Population)
     # println("Generation: $(self.currGeneration)   Mutations: $(mutations) Crossovers: $(crossovers)   Best Solution: $(self.bestChromosom.cost)    Population Size: $(length(newChromosomeSet))")
 end
 
-function __nextGeneration!(self::Population)
-    # NOT USED ANYMORE
-    # for statistic purpose
-    mutations = 0
-    crossovers = 0
-
-    for i = 1 : self.config.populationSize
-        if rand() <= self.config.mutationProb
-            afterMutation = mutate(self.chromosomSet[i], self.config.demand, self.config.supply)
-            push!(self.chromosomSet, afterMutation)
-            mutations += 1
-        end
-    end
-
-    for i = 1 : self.config.populationSize
-        if rand() <= self.config.crossoverProb
-            other = i
-            while other == i
-                other = rand(1:self.config.populationSize)
-            end
-            afterCross1, afterCross2 = cross(self.chromosomSet[i], self.chromosomSet[other])
-            push!(self.chromosomSet, afterCross1, afterCross2)
-            crossovers += 1
-        end
-    end
-
-    for c in self.chromosomSet
-        eval!(c, self.costFunction)
-    end
-    sort!(self.chromosomSet)
-    self.bestChromosom = copy(self.chromosomSet[1])
-    self.chromosomSet = self.chromosomSet[1:self.config.populationSize]
-
-    self.currGeneration += 1
-
-    println("Generation: $(self.currGeneration)   Mutations: $(mutations) Crossovers: $(crossovers)   Best Solution: $(self.bestChromosom.cost)")
-end
-
 """
     Run's genetic algorithm on population.
 """
 function findSolution(population::Population)
-    while population.currGeneration < population.maxGeneration
-        nextGeneration!(population)
+    if population.isTestRun
+        while population.currGeneration < population.maxGeneration
+            nextGenerationTest!(population)
+        end
+    else
+        while population.currGeneration < population.maxGeneration
+            nextGeneration!(population)
+        end
     end
 
     return population.bestChromosom
@@ -206,6 +221,11 @@ end
 function drawResults(self::Population, filename::String, runNumber::Int=-1)
     if self.currGeneration != self.maxGeneration
         println("You have to evolve population first!")
+        return false
+    end
+
+    if !self.isTestRun || length(self.bestsVector) != self.maxGeneration
+        println("You have to set isTestRun = true during population initialization!")
         return false
     end
 
