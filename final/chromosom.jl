@@ -186,6 +186,20 @@ function cross!(self::Chromosom, other::Chromosom)
     
 end
 
+function getSizeForMutation(self::Chromosom, param::Float64)
+    nDemand = round(Int, size(self.result)[1] * param)
+    nSupply = round(Int, size(self.result)[2] * param)
+    
+    if nDemand < 2
+        nDemand = 2
+    end
+    if nSupply < 2
+        nSupply = 2
+    end
+
+    return nDemand, nSupply
+end
+
 """
     Check if chromosom fits as solution.
 """

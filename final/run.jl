@@ -18,5 +18,7 @@ if length(ARGS) == 4
     isTestRun = true
 end
 
+println("Path: ", configFile)
+
 result = GeneticNTP.runGA(configFile, maxGeneration, costFuncName, isTestRun)
 println("Best result: ", result.cost)

@@ -32,6 +32,27 @@ module Generators
         return demand, supply, costMatrix
     end
 
+    function genRandData(filename::String, mutationProb::Float64, crossoverProb::Float64, populationSize::Int, eliteProc::Float64, demandLength::Int, supplyLength::Int, costMaxVal::Float64, sumOfVectorValues::Float64)
+        demand, supply, costMatrix = genRandData(demandLength, supplyLength, costMaxVal, sumOfVectorValues)
+
+        config = Config(mutationProb, crossoverProb, populationSize, eliteProc, costMatrix, demand, supply, false)
+        validate!(config)
+        saveConfig(config, filename)
+    end
+
+    function genRandData(demandLength::Int, supplyLength::Int, costMaxVal::Float64, sumOfVectorValues::Float64)
+        demand, supply = genDemSupVectors(demandLength, supplyLength, sumOfVectorValues)
+        costMatrix = zeros(Float64, demandLength, supplyLength)
+    
+        for i = 1 : length(demand)
+            for j = 1 : length(supply)
+                costMatrix[i, j] = rand() * costMaxVal
+            end
+        end
+    
+        return demand, supply, costMatrix
+    end
+
     function genDemSupVectors(demandLength::Int, supplyLength::Int, sumOfVectorValues::Float64)
         demand = zeros(demandLength)
         supply = zeros(supplyLength)

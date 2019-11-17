@@ -1,5 +1,8 @@
 {
-    "populationSize": 1000,
+    "populationSize": 200,
+    "crossoverProb": 0.8,
+    "eliteProc": 0.1,
+    "mutationProb": 0.05,
     "demand": [
         {
             "val": 17.761989342806395,
@@ -402,7 +405,6 @@
             "i": 100
         }
     ],
-    "crossoverProb": 0.8,
     "supply": [
         {
             "val": 18.050541516245488,
@@ -805,8 +807,6 @@
             "i": 100
         }
     ],
-    "eliteProc": 0.1,
-    "mutationProb": 0.03,
     "costMatrix": [
         {
             "val": 0.0,

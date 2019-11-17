@@ -27,6 +27,13 @@ end
 function runGA(configFile::String, maxGeneration::Int, costFunctionName::String, isTestRun::Bool=false) 
     config = loadConfig(configFile)
 
+    println("==================== CONFIG ====================")
+    println("Population Size: ", config.populationSize, " Crossover: ", config.crossoverProb, " Mutation: ", config.mutationProb, " Elite: ", config.eliteProc, " Iterations: ", maxGeneration)
+    println("Cost Func: ", costFunctionName)
+    println("Test Run: ", isTestRun)
+    println()
+
+
     functionsDict = getFunctions(config.costMatrix)
     costFunc = functionsDict[costFunctionName]
     
@@ -34,6 +41,11 @@ function runGA(configFile::String, maxGeneration::Int, costFunctionName::String,
     println("Best result in first generation: ", population.bestChromosom.cost)
 
     result = findSolution(population)
+    
+    if isTestRun
+        drawResults(population, "resultPlot.png")
+    end
+    
     if !validate(result, config.demand, config.supply)
         error("Error while performing mutation.")
     end
@@ -145,9 +157,11 @@ function nextGeneration!(self::Population)
     end
 
     # mutations + evaluation
+    nDemand, nSupply = getSizeForMutation(self.bestChromosom, 0.05)
     Threads.@threads for c in newChromosomeSet
         if rand() <= self.config.mutationProb
-            mutate!(c, self.config.demand, self.config.supply)
+
+            mutate!(c, self.config.demand, self.config.supply, nDemand, nSupply)
         end
         eval!(c, self.costFunction)
     end
@@ -155,9 +169,9 @@ function nextGeneration!(self::Population)
     sort!(newChromosomeSet)
     self.chromosomSet = newChromosomeSet
     # swap only if better than current best?
-    if getCost(self.bestChromosom, self.costFunction) > getCost(self.chromosomSet[1], self.costFunction)
-        self.bestChromosom = copy(self.chromosomSet[1])
-    end
+    # if getCost(self.bestChromosom, self.costFunction) > getCost(self.chromosomSet[1], self.costFunction)
+    self.bestChromosom = copy(self.chromosomSet[1])
+    # end
 
     self.currGeneration += 1
     return nothing
@@ -166,6 +180,9 @@ end
 function nextGenerationTest!(self::Population)
     nextGeneration!(self)
     push!(self.bestsVector, getCost(self.bestChromosom, self.costFunction))
+    if self.currGeneration % 1000 == 0
+        println("Generation: ", self.currGeneration)
+    end
 end
 
 """
