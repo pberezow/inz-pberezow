@@ -5,7 +5,7 @@ module Generators
 
     export genDataWthZerosDiagonal
 
-    include("genetic2/config.jl")
+    include("final/config.jl")
 
     function genDataWthZerosDiagonal(filename::String, mutationProb::Float64, crossoverProb::Float64, populationSize::Int, eliteProc::Float64, demandLength::Int, supplyLength::Int, costMaxVal::Float64, sumOfVectorValues::Float64)
         demand, supply, costMatrix = genDataWthZerosDiagonal(demandLength, supplyLength, costMaxVal, sumOfVectorValues)

@@ -1,6 +1,6 @@
 {
-    "populationSize": 100,
-    "mutationProb": 0.05,
+    "populationSize": 500,
+    "mutationProb": 0.01,
     "crossoverProb": 0.9,
     "eliteProc": 0.1,
     "demand": [
