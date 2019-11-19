@@ -22,6 +22,8 @@ mutable struct Population
     bestsVector::Vector{Float64} # to plot results
     isTestRun::Bool
     mutex::ReentrantLock
+    nDemand::Int
+    nSupply::Int
 end
 
 function runGA(configFile::String, maxGeneration::Int, costFunctionName::String, isTestRun::Bool=false) 
@@ -84,7 +86,9 @@ function initPopulation(config::Config, maxGeneration::Int, costFunction::Functi
         push!(vec, getCost(bestChromosom, costFunction))
     end
 
-    return Population(config, 1, maxGeneration, chromosomSet, bestChromosom, "", costFunction, vec, isTestRun, mutex)
+    nDemand, nSupply = getSizeForMutation(bestChromosom, config.mutationRate)
+
+    return Population(config, 1, maxGeneration, chromosomSet, bestChromosom, "", costFunction, vec, isTestRun, mutex, nDemand, nSupply)
 end
 
 """
@@ -157,11 +161,14 @@ function nextGeneration!(self::Population)
     end
 
     # mutations + evaluation
-    nDemand, nSupply = getSizeForMutation(self.bestChromosom, 0.05)
+    # nDemand, nSupply = getSizeForMutation(self.bestChromosom, 0.05)
     Threads.@threads for c in newChromosomeSet
         if rand() <= self.config.mutationProb
-
-            mutate!(c, self.config.demand, self.config.supply, nDemand, nSupply)
+            if rand() <= 0.5
+                mutate2!(c, self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+            else
+                mutate!(c, self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+            end
         end
         eval!(c, self.costFunction)
     end

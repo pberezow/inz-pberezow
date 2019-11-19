@@ -86,6 +86,36 @@ function initArray(demand::Vector{Float64}, supply::Vector{Float64})
     return result
 end 
 
+function initArray2(demand::Vector{Float64}, supply::Vector{Float64})
+    result = Array{Float64, 2}(undef, length(demand), length(supply))
+
+    indices = collect(1 : length(demand)*length(supply))
+    shuffle!(indices)
+    for idx in indices
+        d = div((idx-1), length(supply)) + 1
+        s = (idx-1) % length(supply) + 1
+        val = min(demand[d], supply[s]) * rand()
+        result[d, s] = val
+        demand[d] -= val
+        supply[s] -= val
+    end
+
+    for idx in reverse(indices)
+        d = div((idx-1), length(supply)) + 1
+        s = (idx-1) % length(supply) + 1
+        val = min(demand[d], supply[s])
+        result[d, s] += val
+        demand[d] -= val
+        supply[s] -= val
+    end
+
+    # println("Supply: ", supply)
+    # println("Demand: ", demand)
+    # println()
+
+    return result
+end
+
 """
     Evaluates chromosom's cost.
 """
@@ -139,6 +169,54 @@ function mutate!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float6
     end
 
     partialResult = initArray(partialDemand, partialSupply)
+
+    for i = 1 : nDemand
+        for j = 1 : nSupply
+            self.result[demandPerm[i], supplyPerm[j]] = partialResult[i, j]
+        end
+    end
+
+    # to drop later
+    # if !validate(self, demand, supply)
+    #     println("Result array after mutation:")
+    #     println(self.result)
+    #     error("Error while performing mutation.")
+    # end
+
+    return nothing
+end
+
+function mutate2!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float64}, nDemand::Int=2, nSupply::Int=2)
+    self.isCalculated = false
+
+    demandPerm = collect(1:length(demand))
+    shuffle!(demandPerm)
+    demandPerm = demandPerm[1:nDemand]
+
+    supplyPerm = collect(1:length(supply))
+    shuffle!(supplyPerm)
+    supplyPerm = supplyPerm[1:nSupply]
+
+    partialDemand = Vector{Float64}(undef, nDemand)
+    partialSupply = Vector{Float64}(undef, nSupply)
+
+    for i = 1 : nDemand
+        val = 0.0
+        for j in supplyPerm
+            val += self.result[demandPerm[i], j]
+        end
+        partialDemand[i] = val
+    end
+    
+    for i = 1 : nSupply
+        val = 0.0
+        for j in demandPerm
+            val += self.result[j, supplyPerm[i]]
+        end
+        partialSupply[i] = val
+    end
+
+    partialResult = initArray2(partialDemand, partialSupply)
 
     for i = 1 : nDemand
         for j = 1 : nSupply

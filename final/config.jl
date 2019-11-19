@@ -35,6 +35,7 @@ File contains definition of Config struct used in Population struct to set param
 """
 mutable struct Config
     mutationProb::Float64 # [0,1]
+    mutationRate::Float64 # [0,1]
     crossoverProb::Float64 # [0,1]
     populationSize::Int # > 1
     eliteProc::Float64 # % of best chromosoms which will be coppied to next generation
@@ -54,6 +55,11 @@ function validate!(self::Config)
 
     if self.mutationProb < 0.0 || self.mutationProb > 1.0
         error("Wrong mutationProb value ($(self.mutationProb)). It must be between 0 and 1.")
+        return false
+    end
+
+    if self.mutationRate < 0.0 || self.mutationRate > 1.0
+        error("Wrong mutationRate value ($(self.mutationRate)). It must be between 0 and 1.")
         return false
     end
 
@@ -84,8 +90,8 @@ end
 """
     Initializes new config struct with values passed in arguments.
 """
-function initConfig(mutationProb::Float64, crossoverProb::Float64, populationSize::Int, eliteProc::Float64, costMatrix::Array{Float64, 2}, demand::Vector{Float64}, supply::Vector{Float64})
-    config = Config(mutationProb, crossoverProb, populationSize, eliteProc, costMatrix, demand, supply)
+function initConfig(mutationProb::Float64, mutationRate::Float64, crossoverProb::Float64, populationSize::Int, eliteProc::Float64, costMatrix::Array{Float64, 2}, demand::Vector{Float64}, supply::Vector{Float64})
+    config = Config(mutationProb, mutationRate, crossoverProb, populationSize, eliteProc, costMatrix, demand, supply)
     validate!(config)
     return config
 end
@@ -121,6 +127,7 @@ function loadConfig(filename::String)
     end
 
     config = Config(configDict["mutationProb"],
+                    configDict["mutationRate"],
                     configDict["crossoverProb"],
                     configDict["populationSize"],
                     configDict["eliteProc"],
@@ -143,6 +150,7 @@ function saveConfig(config::Config, filename::String)
 
     configDict = Dict()
     configDict["mutationProb"] = config.mutationProb
+    configDict["mutationRate"] = config.mutationRate
     configDict["crossoverProb"] = config.crossoverProb
     configDict["populationSize"] = config.populationSize
     configDict["eliteProc"] = config.eliteProc
@@ -186,11 +194,13 @@ function testSaveLoad()
     supply = [1.0, 5.0, 5.0]
     costMatrix = [1.0 2.0 3.0; 10.0 20.0 30.0]
     mutationProb = 0.1
+    mutationRate = 0.05
     crossoverProb = 0.2
     populationSize = 100
     eliteProc = 0.3
 
-    config = Config(mutationProb, 
+    config = Config(mutationProb,
+                    mutationRate, 
                     crossoverProb, 
                     populationSize,
                     eliteProc,
@@ -205,6 +215,9 @@ function testSaveLoad()
     validate!(config2)
 
     if config.mutationProb != config2.mutationProb
+        error()
+    end
+    if config.mutationRate != config2.mutationRate
         error()
     end
     if config.crossoverProb != config2.crossoverProb

@@ -20,5 +20,7 @@ end
 
 println("Path: ", configFile)
 
+println("Running on ", Threads.nthreads(), " threads")
+
 result = GeneticNTP.runGA(configFile, maxGeneration, costFuncName, isTestRun)
 println("Best result: ", result.cost)
