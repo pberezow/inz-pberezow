@@ -46,14 +46,14 @@ function optimize(configFile::String, solver::String, costFunction::String, para
     println("Status: ", JuMP.termination_status(model))
     println("Result: ", JuMP.objective_value(model))
 
-    result_solution = value.(trans)
-    result_objective = objective_value(model)
+    # result_solution = value.(trans)
+    # result_objective = objective_value(model)
 
-    println("VALUE:\n", result_solution)
-    println("\n\nLENGTH:\n", length(result_solution))
-    println("\n\nOBJECTIVE:\n", result_objective)
+    # println("VALUE:\n", result_solution)
+    # println("\n\nLENGTH:\n", length(result_solution))
+    # println("\n\nOBJECTIVE:\n", result_objective)
 
-    return result_solution
+    return nothing
 end
 
 println("START")

@@ -78,6 +78,11 @@ function validate!(self::Config)
         return false
     end
 
+    if self.eliteProc + self.crossoverProb > 1.0
+        error("eliteProc + crossoverProb must be between 0 and 1.")
+        return false
+    end
+
     if size(self.costMatrix) != (length(self.demand), length(self.supply))
         error("Wrong costMatrix size - $(size(self.costMatrix)). It must be length(demand) x length(supply) ($((length(self.demand), length(self.supply)))).")
         return false
