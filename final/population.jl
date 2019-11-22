@@ -138,44 +138,48 @@ Performs single iteration of genetic algorithm.
 function nextGeneration!(self::Population)
     parents = selection(self)
     
-    # crossovers on parents
     newChromosomeSet = Vector{Chromosom}(undef, length(self.chromosomSet))
+    
+    
     Threads.@threads for i = 1 : 2 : length(parents)
         cross!(parents[i], parents[i+1])
         newChromosomeSet[i] = parents[i]
         newChromosomeSet[i+1] = parents[i+1]
+        for j = 0 : 1
+            if rand() <= self.config.mutationProb
+                if rand() <= 0.5
+                    mutate2!(newChromosomeSet[i+j], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+                else
+                    mutate!(newChromosomeSet[i+j], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+                end
+            end
+            eval!(newChromosomeSet[i+j], self.costFunction)
+        end
     end
-    lastIdx = length(parents)
 
-    # copy eliteProc
+
     eliteCount = floor(Int, self.config.populationSize * self.config.eliteProc)
-    for i = 1 : eliteCount
-        newChromosomeSet[lastIdx+=1] = self.chromosomSet[i]
-    end
-    lastIdx += 1
+    Threads.@threads for i = length(parents) + 1 : self.config.populationSize
+        if i - length(parents) <= eliteCount
+            newChromosomeSet[i] = self.chromosomSet[i - length(parents)]
+        else
+            selected_idx = rand(eliteCount+1 : self.config.populationSize)
+            newChromosomeSet[i] = copy(self.chromosomSet[selected_idx])
+        end
 
-    # add extra random chromosoms from prev generation
-    for i = lastIdx : self.config.populationSize
-        selected_idx = rand(eliteCount+1 : self.config.populationSize)
-        newChromosomeSet[i] = copy(self.chromosomSet[selected_idx])
-    end
-
-    # mutations + evaluation
-    # nDemand, nSupply = getSizeForMutation(self.bestChromosom, 0.05)
-    Threads.@threads for c in newChromosomeSet
         if rand() <= self.config.mutationProb
             if rand() <= 0.5
-                mutate2!(c, self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+                mutate2!(newChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
             else
-                mutate!(c, self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+                mutate!(newChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
             end
         end
-        eval!(c, self.costFunction)
+        eval!(newChromosomeSet[i], self.costFunction)
     end
 
     sort!(newChromosomeSet)
     self.chromosomSet = newChromosomeSet
-    # swap only if better than current best?
+    
     # if getCost(self.bestChromosom, self.costFunction) > getCost(self.chromosomSet[1], self.costFunction)
     self.bestChromosom = copy(self.chromosomSet[1])
     # end
