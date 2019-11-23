@@ -10,7 +10,7 @@ module Generators
     function genDataWthZerosDiagonal(filename::String, mutationProb::Float64, crossoverProb::Float64, populationSize::Int, eliteProc::Float64, demandLength::Int, supplyLength::Int, costMaxVal::Float64, sumOfVectorValues::Float64)
         demand, supply, costMatrix = genDataWthZerosDiagonal(demandLength, supplyLength, costMaxVal, sumOfVectorValues)
 
-        config = Config(mutationProb, crossoverProb, populationSize, eliteProc, costMatrix, demand, supply, false)
+        config = Config(mutationProb, 0.05, crossoverProb, populationSize, eliteProc, costMatrix, demand, supply, false)
         validate!(config)
         saveConfig(config, filename)
     end
@@ -35,7 +35,7 @@ module Generators
     function genRandData(filename::String, mutationProb::Float64, crossoverProb::Float64, populationSize::Int, eliteProc::Float64, demandLength::Int, supplyLength::Int, costMaxVal::Float64, sumOfVectorValues::Float64)
         demand, supply, costMatrix = genRandData(demandLength, supplyLength, costMaxVal, sumOfVectorValues)
 
-        config = Config(mutationProb, crossoverProb, populationSize, eliteProc, costMatrix, demand, supply, false)
+        config = Config(mutationProb, 0.05, crossoverProb, populationSize, eliteProc, costMatrix, demand, supply, false)
         validate!(config)
         saveConfig(config, filename)
     end

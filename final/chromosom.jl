@@ -120,8 +120,10 @@ end
     Evaluates chromosom's cost.
 """
 function eval!(self::Chromosom, costFunc::Function)
-    self.cost = costFunc(self.result)
-    self.isCalculated = true
+    if !self.isCalculated
+        self.cost = costFunc(self.result)
+        self.isCalculated = true
+    end
     return nothing
 end
 
