@@ -120,8 +120,10 @@ end
     Evaluates chromosom's cost.
 """
 function eval!(self::Chromosom, costFunc::Function)
-    self.cost = costFunc(self.result)
-    self.isCalculated = true
+    if !self.isCalculated
+        self.cost = costFunc(self.result)
+        self.isCalculated = true
+    end
     return nothing
 end
 
@@ -176,13 +178,6 @@ function mutate!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float6
         end
     end
 
-    # to drop later
-    # if !validate(self, demand, supply)
-    #     println("Result array after mutation:")
-    #     println(self.result)
-    #     error("Error while performing mutation.")
-    # end
-
     return nothing
 end
 
@@ -223,13 +218,6 @@ function mutate2!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float
             self.result[demandPerm[i], supplyPerm[j]] = partialResult[i, j]
         end
     end
-
-    # to drop later
-    # if !validate(self, demand, supply)
-    #     println("Result array after mutation:")
-    #     println(self.result)
-    #     error("Error while performing mutation.")
-    # end
 
     return nothing
 end
