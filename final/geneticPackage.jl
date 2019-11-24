@@ -12,7 +12,7 @@ module GeneticNTP
         # functions.jl
         makeLinear, makeA, getFunctions,
         # config.jl
-        Config, initConfig, loadConfig, saveConfig
+        Config, initConfig, loadConfig, saveConfig, genCFunctionAndData
 
     include("config.jl")
     include("chromosom.jl")

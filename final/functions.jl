@@ -20,11 +20,12 @@ end
 function makeLinear(costMatrix::Array{Float64, 2})
 
     f = function(resultMatrix::Array{Float64, 2})
-        result = 0.0
-        for i = 1:length(costMatrix)
-            result += costMatrix[i] * resultMatrix[i]
-        end
-        return result
+        return sum(resultMatrix[i, j] * costMatrix[i, j] for i in 1:size(costMatrix)[1], j in 1:size(costMatrix)[2])
+        # result = 0.0
+        # for i = 1:length(costMatrix)
+        #     result += costMatrix[i] * resultMatrix[i]
+        # end
+        # return result
     end
 
     return f

@@ -45,6 +45,97 @@ mutable struct Config
     validated::Bool
 end
 
+function genCFunctionAndData(config::Config, outFile::String, maxGeneration::Int)
+
+    open("cost_function.c", "w") do f
+        write(f, "#include \"genocop.h\"\n\n")
+        write(f, "float cost_function(X)\nVECTOR X;\n{\n")
+        write(f, "return( X[1] * $(config.costMatrix[1]) ")
+        for idx = 2 : length(config.costMatrix)
+            write(f, "+ X[$idx] * $(config.costMatrix[idx]) ")
+        end
+        write(f, ");\n}")
+    end
+
+    open(outFile, "w") do f
+        write(f, "$(length(config.costMatrix))\t$(length(config.demand) + length(config.supply))\t0\t$(length(config.costMatrix))\n")
+        # equations
+        for i = 1 : length(config.demand)
+            for s = 1 : length(config.supply)
+                for d = 1 : length(config.demand)
+                    if d == i
+                        write(f, "1.0 ")
+                    else
+                        write(f, "0.0 ")
+                    end
+                end
+            end
+            write(f, "$(config.demand[i])\n")
+        end
+
+        for i = 1 : length(config.supply)
+            for s = 1 : length(config.supply)
+                for d = 1 : length(config.demand)
+                    if s == i
+                        write(f, "1.0 ")
+                    else
+                        write(f, "0.0 ")
+                    end
+                end
+            end
+            write(f, "$(config.supply[i])\n")
+        end
+
+        # inequalities
+        # none
+        # domain for variables
+        idx = 1
+        for s = 1 : length(config.supply)
+            for d = 1 : length(config.demand)
+                write(f, "0.0\t$idx\t$(min(config.supply[s], config.demand[d]))\n")
+                idx += 1
+            end
+        end
+
+        # population size and number of generations
+        write(f, "$(config.populationSize)\t$maxGeneration\n")
+
+        # frequencies of 7 operators (default = 4 each)
+        write(f, "4\t4\t4\t4\t4\t4\t4\n")
+
+        # (the coeficient q for cumulative probability distribution;
+        # higher q values provide stronger selective pressure;
+        # standard value 0.1 is very reasonable for a population
+        # size 70). 
+        write(f, "0.1\n")
+
+        # (1 is for maximization problem, 0 for minimization).
+        write(f, "0\n")
+
+        # (0 for a start from a random pupulation, 1 for a start
+        # from a single point, i.e., all individuals in the 
+        # initial population are identical). If the system has
+        # difficulties in finding feasible points, it will
+        # prompt you for these (see note below, for parameter TRIES).
+        write(f, "0\n")
+
+        # (a parameter for non-uniform mutation; should stay as 6).
+        write(f, "6\n")
+
+        # (a parameter for simple crossover, leave it as it is).
+        write(f, "10\n")
+
+        # the number of your test-case; any integer would do. It is
+        # convenient if your eval.c file contains several test cases:
+        # then you can run the system (without recompiling) and any
+        # of the test problems present in eval.c.
+        # 100 for generated cost_function
+        write(f, "100\n")
+    end
+
+    return nothing
+end
+
 """
     Validates config struct. (returns true if is valid, otherwise returns false)
 """
