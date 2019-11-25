@@ -30,6 +30,9 @@ File contains definition of Config struct used in Population struct to set param
 """
 
 
+const WRONG_MODE = 0
+const REGULAR_MODE = 1
+const ISLAND_MODE = 2
 """
     Structure used to store all population parameters.
 """
@@ -42,6 +45,8 @@ mutable struct Config
     costMatrix::Array{Float64, 2}
     demand::Vector{Float64}
     supply::Vector{Float64}
+    mode::Int
+    numberOfSeparateGenerations::Int # number of generations before joining all populations
     validated::Bool
 end
 
@@ -179,6 +184,16 @@ function validate!(self::Config)
         return false
     end
 
+    if !(self.mode == ISLAND_MODE || self.mode == REGULAR_MODE)
+        error("Wrong mode - choose 'island' or 'regular' ")
+        return false
+    end
+
+    if self.numberOfSeparateGenerations < 1
+        error("Wrong numberOfSeparateGenerations value - $(self.numberOfSeparateGenerations). It must be greater than 0.")
+        return false
+    end
+
     self.validated = true
     return true
 end
@@ -186,8 +201,8 @@ end
 """
     Initializes new config struct with values passed in arguments.
 """
-function initConfig(mutationProb::Float64, mutationRate::Float64, crossoverProb::Float64, populationSize::Int, eliteProc::Float64, costMatrix::Array{Float64, 2}, demand::Vector{Float64}, supply::Vector{Float64})
-    config = Config(mutationProb, mutationRate, crossoverProb, populationSize, eliteProc, costMatrix, demand, supply)
+function initConfig(mutationProb::Float64, mutationRate::Float64, crossoverProb::Float64, populationSize::Int, eliteProc::Float64, costMatrix::Array{Float64, 2}, demand::Vector{Float64}, supply::Vector{Float64}, mode::Int, numberOfSeparateGenerations::Int)
+    config = Config(mutationProb, mutationRate, crossoverProb, populationSize, eliteProc, costMatrix, demand, supply, mode, numberOfSeparateGenerations, false)
     validate!(config)
     return config
 end
@@ -222,6 +237,13 @@ function loadConfig(filename::String)
         costMatrix[d["d"], d["s"]] = d["val"]
     end
 
+    mode = WRONG_MODE
+    if configDict["mode"] == "regular"
+        mode = REGULAR_MODE
+    elseif configDict["mode"] == "island"
+        mode = ISLAND_MODE
+    end
+
     config = Config(configDict["mutationProb"],
                     configDict["mutationRate"],
                     configDict["crossoverProb"],
@@ -230,6 +252,8 @@ function loadConfig(filename::String)
                     costMatrix,
                     demand,
                     supply,
+                    mode,
+                    configDict["numberOfSeparateGenerations"],
                     false)
     validate!(config)
 
@@ -250,6 +274,14 @@ function saveConfig(config::Config, filename::String)
     configDict["crossoverProb"] = config.crossoverProb
     configDict["populationSize"] = config.populationSize
     configDict["eliteProc"] = config.eliteProc
+    if config.mode == ISLAND_MODE
+        configDict["mode"] = "island"
+    elseif config.mode == REGULAR_MODE
+        configDict["mode"] = "regular"
+    else
+        configDict["mode"] = "wrong"
+    end
+    configDict["numberOfSeparateGenerations"] = config.numberOfSeparateGenerations
 
     costMatrixList = Vector{Dict{String, Any}}(undef, length(config.costMatrix))
     idx = 1
@@ -294,6 +326,8 @@ function testSaveLoad()
     crossoverProb = 0.2
     populationSize = 100
     eliteProc = 0.3
+    mode = REGULAR_MODE
+    numberOfSeparateGenerations = 100
 
     config = Config(mutationProb,
                     mutationRate, 
@@ -303,6 +337,8 @@ function testSaveLoad()
                     costMatrix,
                     demand,
                     supply,
+                    mode,
+                    numberOfSeparateGenerations,
                     false)
     validate!(config)
     saveConfig(config, "test.json")
@@ -332,6 +368,12 @@ function testSaveLoad()
         error()
     end
     if config.supply != config2.supply
+        error()
+    end
+    if config.mode != config2.mode
+        error()
+    end
+    if config.numberOfSeparateGenerations != config2.numberOfSeparateGenerations
         error()
     end
     if config.validated != config2.validated
