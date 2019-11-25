@@ -1,5 +1,5 @@
 module GeneticNTP
-
+    __precompile__()
     using Random
     using JSON
     using PyPlot

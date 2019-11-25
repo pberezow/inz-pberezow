@@ -1,31 +1,44 @@
 include("geneticPackage.jl")
+import .GeneticNTP
 
 if length(ARGS) < 3 || length(ARGS) > 4
     error("Wrong arguments!")
 end
 
-configFile = ARGS[1]
+const configFile = ARGS[1]
 
-maxGeneration = tryparse(Int, ARGS[2])
+const maxGeneration = tryparse(Int, ARGS[2])
 if isnothing(maxGeneration)
     error("Wrong value of 2nd (maxGeneration) argument!")
 end
 
-costFuncName = ARGS[3]
+const costFuncName = ARGS[3]
 
-isTestRun = false
+_isTestRun = false
 if length(ARGS) == 4
-    isTestRun = true
+    _isTestRun = true
 end
+const isTestRun = _isTestRun
 
 println("Path: ", configFile)
 
 println("Running on ", Threads.nthreads(), " threads")
 
-t1 = time()
-result = GeneticNTP.runGA(configFile, maxGeneration, costFuncName, isTestRun)
-t2 = time()
+function run(precompile::Bool=false)
+    t1 = time()
+    if precompile
+        result = GeneticNTP.runGA(configFile, 2, costFuncName, false)
+    else
+        result = GeneticNTP.runGA(configFile, maxGeneration, costFuncName, isTestRun)
+    end
+    t2 = time()
 
-println("Done in: ", t2-t1)
+    println("Done in: ", t2-t1)
 
-println("Best result: ", result.cost)
+    println("Best result: ", result.cost)
+    return nothing
+end
+
+run(true)
+println("\n\n")
+run()
