@@ -240,10 +240,11 @@ Performs single iteration of genetic algorithm.
 # Arguments
 - `self::Population`: evolving population.
 """
-function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int, newChromosomeSet::Vector{Chromosom})
+function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
     parents = selection(self, parentsToPick)
     
-    # newChromosomeSet = Vector{Chromosom}(undef, length(self.chromosomSet))    
+    newChromosomeSet = Vector{Chromosom}(undef, length(self.chromosomSet))
+
     Threads.@threads for i = 1 : 2 : length(parents)
         cross!(parents[i], parents[i+1])
         newChromosomeSet[i] = parents[i]
@@ -279,10 +280,7 @@ function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int, 
     end
 
     sort!(newChromosomeSet)
-    for i = 1 : length(self.chromosomSet)
-        self.chromosomSet[i] = newChromosomeSet[i]
-    end
-    # self.chromosomSet = newChromosomeSet
+    self.chromosomSet = newChromosomeSet
     
     if getCost(self.bestChromosom, self.costFunction) > getCost(self.chromosomSet[1], self.costFunction)
         self.bestChromosom = copy(self.chromosomSet[1])
@@ -333,8 +331,8 @@ function islandNextGeneration!(self::Population, firstIdx::Int, lastIdx::Int, pa
     return nothing
 end
 
-function nextGenerationTest!(self::Population, parentsToPick::Int, eliteCount::Int, newChromosomeSet::Vector{Chromosom})
-    nextGeneration!(self, parentsToPick, eliteCount, newChromosomeSet)
+function nextGenerationTest!(self::Population, parentsToPick::Int, eliteCount::Int)
+    nextGeneration!(self, parentsToPick, eliteCount)
     push!(self.bestsVector, getCost(self.chromosomSet[1], self.costFunction))
     if self.currGeneration % 1000 == 0
         println("Generation: ", self.currGeneration)
@@ -347,16 +345,15 @@ end
     Run's genetic algorithm on population.
 """
 function findSolution(population::Population)
-    newChromosomeSet = Vector{Chromosom}(undef, population.config.populationSize)
-
     if population.isTestRun
         if population.config.mode == REGULAR_MODE
             # TEST - REGULAR MODE
             while population.currGeneration < population.maxGeneration
-                nextGenerationTest!(population, population.partialPopulationsData[1][3], population.partialPopulationsData[1][4], newChromosomeSet)
+                nextGenerationTest!(population, population.partialPopulationsData[1][3], population.partialPopulationsData[1][4])
             end
         elseif population.config.mode == ISLAND_MODE
             # TEST - ISLAND MODE
+            newChromosomeSet = Vector{Chromosom}(undef, population.config.populationSize)
             while population.currGeneration < population.maxGeneration
                 shuffle!(population.chromosomSet)
                 
@@ -377,10 +374,11 @@ function findSolution(population::Population)
         if population.config.mode == REGULAR_MODE
             # REGULAR MODE
             while population.currGeneration < population.maxGeneration
-                nextGeneration!(population, population.partialPopulationsData[1][3], population.partialPopulationsData[1][4], newChromosomeSet)
+                nextGeneration!(population, population.partialPopulationsData[1][3], population.partialPopulationsData[1][4])
             end
         elseif population.config.mode == ISLAND_MODE
             # ISLAND MODE
+            newChromosomeSet = Vector{Chromosom}(undef, population.config.populationSize)
             while population.currGeneration < population.maxGeneration
                 shuffle!(population.chromosomSet)
                 

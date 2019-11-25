@@ -4,8 +4,8 @@
     "mutationProb": 0.1,
     "mutationRate": 0.15,
     "crossoverProb": 0.7,
-    "mode": "regular",
-    "numberOfSeparateGenerations": 1,
+    "mode": "island",
+    "numberOfSeparateGenerations": 100,
     "demand": [
         {
             "val": 16.501650165016503,
