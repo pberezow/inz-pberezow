@@ -189,10 +189,8 @@ function selection(self::Population, parentsToPick::Int)
     #3
     parents = Vector{Chromosom}(undef, parentsToPick)
 
-    # println(fittness)
     for i = 1 : parentsToPick
         pick = rand()
-        # println(pick)
         idx = findfirst(x -> x <= pick, fittness)
         if idx === nothing
             idx = 1

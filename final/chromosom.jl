@@ -72,46 +72,36 @@ end
 function initArray(demand::Vector{Float64}, supply::Vector{Float64})
     result = Array{Float64, 2}(undef, length(demand), length(supply))
 
-    indices = collect(1 : length(demand)*length(supply))
+    indices = vec([(i,j) for i in 1 : length(demand), j in 1 : length(supply)])
     shuffle!(indices)
     for idx in indices
-        d = div((idx-1), length(supply)) + 1
-        s = (idx-1) % length(supply) + 1
-        val = min(demand[d], supply[s])
-        result[d, s] = val
-        demand[d] -= val
-        supply[s] -= val
+        val = min(demand[idx[1]], supply[idx[2]])
+        result[idx[1], idx[2]] = val
+        demand[idx[1]] -= val
+        supply[idx[2]] -= val
     end
-    
+
     return result
-end 
+end
 
 function initArray2(demand::Vector{Float64}, supply::Vector{Float64})
     result = Array{Float64, 2}(undef, length(demand), length(supply))
 
-    indices = collect(1 : length(demand)*length(supply))
+    indices = vec([(i,j) for i in 1 : length(demand), j in 1 : length(supply)])
     shuffle!(indices)
     for idx in indices
-        d = div((idx-1), length(supply)) + 1
-        s = (idx-1) % length(supply) + 1
-        val = min(demand[d], supply[s]) * rand()
-        result[d, s] = val
-        demand[d] -= val
-        supply[s] -= val
+        val = min(demand[idx[1]], supply[idx[2]]) * rand()
+        result[idx[1], idx[2]] = val
+        demand[idx[1]] -= val
+        supply[idx[2]] -= val
     end
 
     for idx in reverse(indices)
-        d = div((idx-1), length(supply)) + 1
-        s = (idx-1) % length(supply) + 1
-        val = min(demand[d], supply[s])
-        result[d, s] += val
-        demand[d] -= val
-        supply[s] -= val
+        val = min(demand[idx[1]], supply[idx[2]])
+        result[idx[1], idx[2]] += val
+        demand[idx[1]] -= val
+        supply[idx[2]] -= val
     end
-
-    # println("Supply: ", supply)
-    # println("Demand: ", demand)
-    # println()
 
     return result
 end
