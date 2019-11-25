@@ -90,7 +90,8 @@ function initPopulation(config::Config, maxGeneration::Int, costFunction::Functi
     # to draw plots
     vec = Vector{Float64}()
     if isTestRun
-        push!(vec, getCost(bestChromosom, costFunction))
+        # getCost() removed
+        push!(vec, bestChromosom.cost)
     end
 
     nDemand, nSupply = getSizeForMutation(bestChromosom, config.mutationRate)
@@ -178,9 +179,10 @@ function selection(self::Population, parentsToPick::Int)
     #1
     fittness = Vector{Float64}(undef, length(self.chromosomSet))
     
-    fittness[length(self.chromosomSet)] = getCost(self.chromosomSet[length(self.chromosomSet)], self.costFunction)
+    # getCost() removed
+    fittness[length(self.chromosomSet)] = self.chromosomSet[length(self.chromosomSet)].cost
     for i = length(self.chromosomSet)-1 : -1 : 1
-        fittness[i] = getCost(self.chromosomSet[i], self.costFunction) + fittness[i+1]
+        fittness[i] = self.chromosomSet[i].cost + fittness[i+1]
     end
 
     #2
@@ -189,7 +191,7 @@ function selection(self::Population, parentsToPick::Int)
     #3
     parents = Vector{Chromosom}(undef, parentsToPick)
 
-    for i = 1 : parentsToPick
+    Threads.@threads for i = 1 : parentsToPick
         pick = rand()
         idx = findfirst(x -> x <= pick, fittness)
         if idx === nothing
@@ -206,10 +208,11 @@ function islandSelection(self::Population, firstIdx::Int, lastIdx::Int, parentsT
     currIdx = lastIdx - firstIdx + 1
     fittness = Vector{Float64}(undef, currIdx)
     
-    fittness[currIdx] = getCost(self.chromosomSet[lastIdx], self.costFunction)
+    # getCost() removed
+    fittness[currIdx] = self.chromosomSet[lastIdx].cost
     for i = lastIdx-1 : -1 : firstIdx
         currIdx -= 1
-        fittness[currIdx] = getCost(self.chromosomSet[i], self.costFunction) + fittness[currIdx+1]
+        fittness[currIdx] = self.chromosomSet[i].cost + fittness[currIdx+1]
     end
 
     #2
@@ -280,7 +283,8 @@ function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
     sort!(newChromosomeSet)
     self.chromosomSet = newChromosomeSet
     
-    if getCost(self.bestChromosom, self.costFunction) > getCost(self.chromosomSet[1], self.costFunction)
+    # getCost() removed
+    if self.bestChromosom.cost > self.chromosomSet[1].cost
         self.bestChromosom = copy(self.chromosomSet[1])
     end
 
@@ -331,7 +335,8 @@ end
 
 function nextGenerationTest!(self::Population, parentsToPick::Int, eliteCount::Int)
     nextGeneration!(self, parentsToPick, eliteCount)
-    push!(self.bestsVector, getCost(self.chromosomSet[1], self.costFunction))
+    # getCost() removed
+    push!(self.bestsVector, self.chromosomSet[1].cost)
     if self.currGeneration % 1000 == 0
         println("Generation: ", self.currGeneration)
     end
@@ -364,8 +369,11 @@ function findSolution(population::Population)
                 population.currGeneration += population.config.numberOfSeparateGenerations
 
                 sort!(population.chromosomSet)
-                population.bestChromosom = copy(population.chromosomSet[1])
-                push!(population.bestsVector, getCost(population.chromosomSet[1], population.costFunction))
+                if population.bestChromosom.cost > population.chromosomSet[1].cost
+                    population.bestChromosom = copy(population.chromosomSet[1])
+                end
+                # getCost() removed
+                push!(population.bestsVector, population.chromosomSet[1].cost)
             end
         end
     else
@@ -389,7 +397,9 @@ function findSolution(population::Population)
                 population.currGeneration += population.config.numberOfSeparateGenerations
 
                 sort!(population.chromosomSet)
-                population.bestChromosom = copy(population.chromosomSet[1])
+                if population.bestChromosom.cost > population.chromosomSet[1].cost
+                    population.bestChromosom = copy(population.chromosomSet[1])
+                end
             end
         end
     end

@@ -145,19 +145,11 @@ function mutate!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float6
     partialSupply = Vector{Float64}(undef, nSupply)
 
     for i = 1 : nDemand
-        val = 0.0
-        for j in supplyPerm
-            val += self.result[demandPerm[i], j]
-        end
-        partialDemand[i] = val
+        partialDemand[i] = sum(self.result[demandPerm[i], j] for j in supplyPerm)
     end
     
     for i = 1 : nSupply
-        val = 0.0
-        for j in demandPerm
-            val += self.result[j, supplyPerm[i]]
-        end
-        partialSupply[i] = val
+        partialSupply[i] = sum(self.result[j, supplyPerm[i]] for j in demandPerm)
     end
 
     partialResult = initArray(partialDemand, partialSupply)
@@ -186,19 +178,11 @@ function mutate2!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float
     partialSupply = Vector{Float64}(undef, nSupply)
 
     for i = 1 : nDemand
-        val = 0.0
-        for j in supplyPerm
-            val += self.result[demandPerm[i], j]
-        end
-        partialDemand[i] = val
+        partialDemand[i] = sum(self.result[demandPerm[i], j] for j in supplyPerm)
     end
     
     for i = 1 : nSupply
-        val = 0.0
-        for j in demandPerm
-            val += self.result[j, supplyPerm[i]]
-        end
-        partialSupply[i] = val
+        partialSupply[i] = sum(self.result[j, supplyPerm[i]] for j in demandPerm)
     end
 
     partialResult = initArray2(partialDemand, partialSupply)
@@ -239,7 +223,6 @@ function cross!(self::Chromosom, other::Chromosom)
     other.result = Y
 
     return nothing
-    
 end
 
 function getSizeForMutation(self::Chromosom, param::Float64)
