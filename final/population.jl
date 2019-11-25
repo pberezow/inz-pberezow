@@ -308,7 +308,7 @@ function islandNextGeneration!(self::Population, firstIdx::Int, lastIdx::Int, pa
 
     for i = currIdx : lastIdx
         selected_idx = rand(0 : lastIdx - firstIdx)
-        newChromosomeSet[i] = copy(self.chromosomSet[selected_idx])
+        newChromosomeSet[i] = copy(self.chromosomSet[firstIdx + selected_idx])
     end
 
     for i = firstIdx : lastIdx
