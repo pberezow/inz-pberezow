@@ -38,8 +38,15 @@ function runGA(configFile::String, maxGeneration::Int, costFunctionName::String,
 
     functionsDict = getFunctions(config.costMatrix)
     costFunc = functionsDict[costFunctionName]
-    
-    population = initPopulation(config, maxGeneration, costFunc, isTestRun)
+
+    population = nothing
+    if config.mode == REGULAR_MODE
+        population = initPopulation(config, maxGeneration, costFunc, isTestRun, 1)
+    elseif config.mode == ISLAND_MODE
+        population = initPopulation(config, maxGeneration, costFunc, isTestRun, Threads.nthreads())
+    else
+        error()
+    end
     println("Best result in first generation: ", population.bestChromosom.cost)
 
     result = findSolution(population)
@@ -64,7 +71,7 @@ Initializes new population.
 - `maxGeneration::Integer`: number of iterations before algorithm stops.
 - `costFunction::Function`: function used to calculate cost of single solution, should have signature func(resultMatrix::Array{Float64, 2}).
 """
-function initPopulation(config::Config, maxGeneration::Int, costFunction::Function, isTestRun::Bool=false, numberOfSeparatePopulations::Int=Threads.nthreads())
+function initPopulation(config::Config, maxGeneration::Int, costFunction::Function, isTestRun::Bool=false, numberOfSeparatePopulations::Int=1)
     validate!(config)
 
     chromosomSet = Vector{Chromosom}()
@@ -167,7 +174,7 @@ end
 """
     Select chromosoms to reproduction.
 """
-function selection(self::Population)
+function selection(self::Population, parentsToPick::Int)
     #1
     fittness = Vector{Float64}(undef, length(self.chromosomSet))
     
@@ -180,10 +187,6 @@ function selection(self::Population)
     fittness ./= fittness[1]
 
     #3
-    parentsToPick = floor(Int, self.config.populationSize * self.config.crossoverProb)
-    if parentsToPick % 2 == 1
-        parentsToPick += 1
-    end
     parents = Vector{Chromosom}(undef, parentsToPick)
 
     # println(fittness)
@@ -237,12 +240,10 @@ Performs single iteration of genetic algorithm.
 # Arguments
 - `self::Population`: evolving population.
 """
-function nextGeneration!(self::Population)
-    parents = selection(self)
+function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int, newChromosomeSet::Vector{Chromosom})
+    parents = selection(self, parentsToPick)
     
-    newChromosomeSet = Vector{Chromosom}(undef, length(self.chromosomSet))
-    
-    
+    # newChromosomeSet = Vector{Chromosom}(undef, length(self.chromosomSet))    
     Threads.@threads for i = 1 : 2 : length(parents)
         cross!(parents[i], parents[i+1])
         newChromosomeSet[i] = parents[i]
@@ -259,8 +260,6 @@ function nextGeneration!(self::Population)
         end
     end
 
-
-    eliteCount = floor(Int, self.config.populationSize * self.config.eliteProc)
     Threads.@threads for i = length(parents) + 1 : self.config.populationSize
         if i - length(parents) <= eliteCount
             newChromosomeSet[i] = self.chromosomSet[i - length(parents)]
@@ -280,11 +279,14 @@ function nextGeneration!(self::Population)
     end
 
     sort!(newChromosomeSet)
-    self.chromosomSet = newChromosomeSet
+    for i = 1 : length(self.chromosomSet)
+        self.chromosomSet[i] = newChromosomeSet[i]
+    end
+    # self.chromosomSet = newChromosomeSet
     
-    # if getCost(self.bestChromosom, self.costFunction) > getCost(self.chromosomSet[1], self.costFunction)
-    self.bestChromosom = copy(self.chromosomSet[1])
-    # end
+    if getCost(self.bestChromosom, self.costFunction) > getCost(self.chromosomSet[1], self.costFunction)
+        self.bestChromosom = copy(self.chromosomSet[1])
+    end
 
     self.currGeneration += 1
     return nothing
@@ -331,9 +333,9 @@ function islandNextGeneration!(self::Population, firstIdx::Int, lastIdx::Int, pa
     return nothing
 end
 
-function nextGenerationTest!(self::Population)
-    nextGeneration!(self)
-    push!(self.bestsVector, getCost(self.bestChromosom, self.costFunction))
+function nextGenerationTest!(self::Population, parentsToPick::Int, eliteCount::Int, newChromosomeSet::Vector{Chromosom})
+    nextGeneration!(self, parentsToPick, eliteCount, newChromosomeSet)
+    push!(self.bestsVector, getCost(self.chromosomSet[1], self.costFunction))
     if self.currGeneration % 1000 == 0
         println("Generation: ", self.currGeneration)
     end
@@ -345,13 +347,16 @@ end
     Run's genetic algorithm on population.
 """
 function findSolution(population::Population)
+    newChromosomeSet = Vector{Chromosom}(undef, population.config.populationSize)
+
     if population.isTestRun
         if population.config.mode == REGULAR_MODE
+            # TEST - REGULAR MODE
             while population.currGeneration < population.maxGeneration
-                nextGenerationTest!(population)
+                nextGenerationTest!(population, population.partialPopulationsData[1][3], population.partialPopulationsData[1][4], newChromosomeSet)
             end
         elseif population.config.mode == ISLAND_MODE
-            newChromosomeSet = Vector{Chromosom}(undef, population.config.populationSize)
+            # TEST - ISLAND MODE
             while population.currGeneration < population.maxGeneration
                 shuffle!(population.chromosomSet)
                 
@@ -370,11 +375,12 @@ function findSolution(population::Population)
         end
     else
         if population.config.mode == REGULAR_MODE
+            # REGULAR MODE
             while population.currGeneration < population.maxGeneration
-                nextGeneration!(population)
+                nextGeneration!(population, population.partialPopulationsData[1][3], population.partialPopulationsData[1][4], newChromosomeSet)
             end
         elseif population.config.mode == ISLAND_MODE
-            newChromosomeSet = Vector{Chromosom}(undef, population.config.populationSize)
+            # ISLAND MODE
             while population.currGeneration < population.maxGeneration
                 shuffle!(population.chromosomSet)
                 
