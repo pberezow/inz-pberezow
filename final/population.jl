@@ -20,10 +20,12 @@ mutable struct Population
     costFunction::Function
     bestsVector::Vector{Float64} # to plot results
     isTestRun::Bool
-    mutex::ReentrantLock
     nDemand::Int
     nSupply::Int
     partialPopulationsData::Vector{Tuple{Int, Int, Int, Int}} # (firstIdx, lastIdx, parentsToPick, eliteCount)
+    fittness::Vector{Float64}
+    parents::Vector{Chromosom}
+    tmpChromosomeSet::Vector{Chromosom}
 end
 
 function runGA(configFile::String, maxGeneration::Int, costFunctionName::String, isTestRun::Bool=false) 
@@ -74,14 +76,10 @@ Initializes new population.
 function initPopulation(config::Config, maxGeneration::Int, costFunction::Function, isTestRun::Bool=false, numberOfSeparatePopulations::Int=1)
     validate!(config)
 
-    chromosomSet = Vector{Chromosom}()
-    mutex = ReentrantLock()
+    chromosomSet = Vector{Chromosom}(undef, config.populationSize)
     Threads.@threads for i = 1 : config.populationSize
-        c = init(config.demand, config.supply)
-        eval!(c, costFunction)
-        lock(mutex)
-        push!(chromosomSet, c)
-        unlock(mutex)
+        chromosomSet[i] = init(config.demand, config.supply)
+        eval!(chromosomSet[i], costFunction)
     end
 
     sort!(chromosomSet)
@@ -98,7 +96,14 @@ function initPopulation(config::Config, maxGeneration::Int, costFunction::Functi
 
     partialPopulationsData = getPartialPopulationsData(config, numberOfSeparatePopulations)
 
-    return Population(config, 1, maxGeneration, chromosomSet, bestChromosom, costFunction, vec, isTestRun, mutex, nDemand, nSupply, partialPopulationsData)
+    fittness = Vector{Float64}(undef, length(chromosomSet))
+
+    parentsToPick = sum(partialPopulationsData[i][3] for i in 1 : length(partialPopulationsData))
+    parents = Vector{Chromosom}(undef, parentsToPick)
+
+    tmpChromosomSet = Vector{Chromosom}(undef, length(chromosomSet))
+
+    return Population(config, 1, maxGeneration, chromosomSet, bestChromosom, costFunction, vec, isTestRun, nDemand, nSupply, partialPopulationsData, fittness, parents, tmpChromosomSet)
 end
 
 function getPartialPopulationsData(config::Config, numberOfSeparatePopulations::Int)
@@ -172,65 +177,71 @@ function getPartialPopulationsData(config::Config, numberOfSeparatePopulations::
     return partialPopulationsData
 end
 
+function _calcFittness!(self::Population)
+    # getCost() removed
+    self.fittness[length(self.chromosomSet)] = self.chromosomSet[length(self.chromosomSet)].cost
+    for i = length(self.chromosomSet)-1 : -1 : 1
+        self.fittness[i] = self.chromosomSet[i].cost + self.fittness[i+1]
+    end
+
+    #2
+    self.fittness ./= self.fittness[1]
+    return nothing
+end
+
 """
     Select chromosoms to reproduction.
 """
-function selection(self::Population, parentsToPick::Int)
-    #1
-    fittness = Vector{Float64}(undef, length(self.chromosomSet))
+function selection!(self::Population, parentsToPick::Int)
     
-    # getCost() removed
-    fittness[length(self.chromosomSet)] = self.chromosomSet[length(self.chromosomSet)].cost
-    for i = length(self.chromosomSet)-1 : -1 : 1
-        fittness[i] = self.chromosomSet[i].cost + fittness[i+1]
-    end
-
-    #2
-    fittness ./= fittness[1]
-
-    #3
-    parents = Vector{Chromosom}(undef, parentsToPick)
+    _calcFittness!(self)
 
     Threads.@threads for i = 1 : parentsToPick
         pick = rand()
-        idx = findfirst(x -> x <= pick, fittness)
+        idx = findfirst(x -> x <= pick, self.fittness)
         if idx === nothing
-            idx = 1
+            idx = length(self.chromosomSet)
         end
-        parents[i] = copy(self.chromosomSet[idx])
+        self.parents[i] = copy(self.chromosomSet[idx])
     end
 
-    return parents
+    return nothing
 end
 
-function islandSelection(self::Population, firstIdx::Int, lastIdx::Int, parentsToPick::Int)
-    #1
-    currIdx = lastIdx - firstIdx + 1
-    fittness = Vector{Float64}(undef, currIdx)
-    
-    # getCost() removed
-    fittness[currIdx] = self.chromosomSet[lastIdx].cost
+function _calcPartialFittness!(self::Population, firstIdx::Int, lastIdx::Int)
+    self.fittness[lastIdx] = self.chromosomSet[lastIdx].cost
     for i = lastIdx-1 : -1 : firstIdx
-        currIdx -= 1
-        fittness[currIdx] = self.chromosomSet[i].cost + fittness[currIdx+1]
+        self.fittness[i] = self.chromosomSet[i].cost + self.fittness[i+1]
     end
 
     #2
-    fittness ./= fittness[1]
+    self.fittness ./= self.fittness[1]
+    return nothing
+end
 
-    #3
-    parents = Vector{Chromosom}(undef, parentsToPick)
+function islandSelection!(self::Population, firstIdx::Int, lastIdx::Int, parentsToPick::Int, partialDataIdx::Int)
+    _calcPartialFittness!(self, firstIdx, lastIdx)
 
-    for i = 1 : parentsToPick
-        pick = rand()
-        idx = findfirst(x -> x <= pick, fittness)
-        if idx === nothing
-            idx = 1
-        end
-        parents[i] = copy(self.chromosomSet[firstIdx + idx - 1])
+    parentsIdx = 1
+    for i = 1 : partialDataIdx-1
+        parentsIdx += self.partialPopulationsData[i][3]
     end
 
-    return parents
+    for i = parentsIdx : parentsIdx + parentsToPick - 1
+        pick = rand()
+
+        selectedIdx = lastIdx
+        for idx = firstIdx : lastIdx
+            if self.fittness[idx] <= pick
+                selectedIdx = idx
+                break
+            end
+        end
+            
+        self.parents[i] = copy(self.chromosomSet[selectedIdx])
+    end
+
+    return nothing
 end
 
 """
@@ -242,46 +253,47 @@ Performs single iteration of genetic algorithm.
 - `self::Population`: evolving population.
 """
 function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
-    parents = selection(self, parentsToPick)
+    selection!(self, parentsToPick)
     
-    newChromosomeSet = Vector{Chromosom}(undef, length(self.chromosomSet))
-
-    Threads.@threads for i = 1 : 2 : length(parents)
-        cross!(parents[i], parents[i+1])
-        newChromosomeSet[i] = parents[i]
-        newChromosomeSet[i+1] = parents[i+1]
+    Threads.@threads for i = 1 : 2 : length(self.parents)
+        cross!(self.parents[i], self.parents[i+1])
+        self.tmpChromosomeSet[i] = self.parents[i]
+        self.tmpChromosomeSet[i+1] = self.parents[i+1]
         for j = 0 : 1
             if rand() <= self.config.mutationProb
                 if rand() <= 0.5
-                    mutate2!(newChromosomeSet[i+j], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+                    mutate2!(self.tmpChromosomeSet[i+j], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
                 else
-                    mutate!(newChromosomeSet[i+j], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+                    mutate!(self.tmpChromosomeSet[i+j], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
                 end
             end
-            eval!(newChromosomeSet[i+j], self.costFunction)
+            eval!(self.tmpChromosomeSet[i+j], self.costFunction)
         end
     end
 
-    Threads.@threads for i = length(parents) + 1 : self.config.populationSize
-        if i - length(parents) <= eliteCount
-            newChromosomeSet[i] = self.chromosomSet[i - length(parents)]
+    Threads.@threads for i = length(self.parents) + 1 : self.config.populationSize
+        if i - length(self.parents) <= eliteCount
+            self.tmpChromosomeSet[i] = self.chromosomSet[i - length(self.parents)]
         else
             selected_idx = rand(eliteCount+1 : self.config.populationSize)
-            newChromosomeSet[i] = copy(self.chromosomSet[selected_idx])
+            self.tmpChromosomeSet[i] = copy(self.chromosomSet[selected_idx])
         end
 
         if rand() <= self.config.mutationProb
             if rand() <= 0.5
-                mutate2!(newChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+                mutate2!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
             else
-                mutate!(newChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+                mutate!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
             end
         end
-        eval!(newChromosomeSet[i], self.costFunction)
+        eval!(self.tmpChromosomeSet[i], self.costFunction)
     end
 
-    sort!(newChromosomeSet)
-    self.chromosomSet = newChromosomeSet
+    sort!(self.tmpChromosomeSet)
+
+    tmp = self.chromosomSet
+    self.chromosomSet = self.tmpChromosomeSet
+    self.tmpChromosomeSet = tmp
     
     # getCost() removed
     if self.bestChromosom.cost > self.chromosomSet[1].cost
@@ -292,42 +304,47 @@ function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
     return nothing
 end
 
-function islandNextGeneration!(self::Population, firstIdx::Int, lastIdx::Int, parentsToPick::Int, eliteCount::Int, newChromosomeSet::Vector{Chromosom})
-    parents = islandSelection(self, firstIdx, lastIdx, parentsToPick)
+function islandNextGeneration!(self::Population, firstIdx::Int, lastIdx::Int, parentsToPick::Int, eliteCount::Int, partialDataIdx::Int)
+    islandSelection!(self, firstIdx, lastIdx, parentsToPick, partialDataIdx)
     
     currIdx = firstIdx
     for i = 1 : eliteCount
-        newChromosomeSet[currIdx] = self.chromosomSet[currIdx]
+        self.tmpChromosomeSet[currIdx] = self.chromosomSet[currIdx]
         currIdx += 1
     end
 
-    for i = 1 : 2 : length(parents)
-        cross!(parents[i], parents[i+1])
-        newChromosomeSet[currIdx] = parents[i]
-        newChromosomeSet[currIdx+1] = parents[i+1]
+    parentsIdx = 1
+    for i = 1 : partialDataIdx-1
+        parentsIdx += self.partialPopulationsData[i][3]
+    end
+
+    for i = parentsIdx : 2 : parentsIdx + parentsToPick - 1
+        cross!(self.parents[i], self.parents[i+1])
+        self.tmpChromosomeSet[currIdx] = self.parents[i]
+        self.tmpChromosomeSet[currIdx+1] = self.parents[i+1]
         currIdx += 2
     end
 
     for i = currIdx : lastIdx
-        selected_idx = rand(0 : lastIdx - firstIdx)
-        newChromosomeSet[i] = copy(self.chromosomSet[firstIdx + selected_idx])
+        selected_idx = rand(firstIdx : lastIdx)
+        self.tmpChromosomeSet[i] = copy(self.chromosomSet[selected_idx])
     end
 
     for i = firstIdx : lastIdx
         if rand() <= self.config.mutationProb
             if rand() <= 0.5
-                mutate2!(newChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+                mutate2!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
             else
-                mutate!(newChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+                mutate!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
             end
         end
-        eval!(newChromosomeSet[i], self.costFunction)
+        eval!(self.tmpChromosomeSet[i], self.costFunction)
     end
 
-    sort!(newChromosomeSet, firstIdx, lastIdx, QuickSort, Base.Order.Forward)
+    sort!(self.tmpChromosomeSet, firstIdx, lastIdx, QuickSort, Base.Order.Forward)
     
     for i = firstIdx : lastIdx
-        self.chromosomSet[i] = newChromosomeSet[i]
+        self.chromosomSet[i], self.tmpChromosomeSet[i] = self.tmpChromosomeSet[i], self.chromosomSet[i]
     end
     
     return nothing
@@ -356,14 +373,13 @@ function findSolution(population::Population)
             end
         elseif population.config.mode == ISLAND_MODE
             # TEST - ISLAND MODE
-            newChromosomeSet = Vector{Chromosom}(undef, population.config.populationSize)
             while population.currGeneration < population.maxGeneration
                 shuffle!(population.chromosomSet)
                 
                 Threads.@threads for i = 1 : length(population.partialPopulationsData)
                     sort!(population.chromosomSet, population.partialPopulationsData[i][1], population.partialPopulationsData[i][2], QuickSort, Base.Order.Forward)
                     for j = 1 : population.config.numberOfSeparateGenerations
-                        islandNextGeneration!(population, population.partialPopulationsData[i]..., newChromosomeSet)
+                        islandNextGeneration!(population, population.partialPopulationsData[i]..., i)
                     end
                 end
                 population.currGeneration += population.config.numberOfSeparateGenerations
@@ -384,14 +400,13 @@ function findSolution(population::Population)
             end
         elseif population.config.mode == ISLAND_MODE
             # ISLAND MODE
-            newChromosomeSet = Vector{Chromosom}(undef, population.config.populationSize)
             while population.currGeneration < population.maxGeneration
                 shuffle!(population.chromosomSet)
                 
                 Threads.@threads for i = 1 : length(population.partialPopulationsData)
                     sort!(population.chromosomSet, population.partialPopulationsData[i][1], population.partialPopulationsData[i][2], QuickSort, Base.Order.Forward)
                     for j = 1 : population.config.numberOfSeparateGenerations
-                        islandNextGeneration!(population, population.partialPopulationsData[i]..., newChromosomeSet)
+                        islandNextGeneration!(population, population.partialPopulationsData[i]..., i)
                     end
                 end
                 population.currGeneration += population.config.numberOfSeparateGenerations
