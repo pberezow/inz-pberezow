@@ -18,12 +18,12 @@ mutable struct Population
     chromosomSet::Vector{Chromosom}
     bestChromosom::Chromosom
     costFunction::Function
-    bestsVector::Vector{Float64} # to plot results
+    bestsVector::Vector{Float32} # to plot results
     isTestRun::Bool
     nDemand::Int
     nSupply::Int
     partialPopulationsData::Vector{Tuple{Int, Int, Int, Int}} # (firstIdx, lastIdx, parentsToPick, eliteCount)
-    fittness::Vector{Float64}
+    fittness::Vector{Float32}
     parents::Vector{Chromosom}
     tmpChromosomeSet::Vector{Chromosom}
 end
@@ -71,7 +71,7 @@ Initializes new population.
 # Arguments
 - `config::Config`: Config struct including all population's parameters.
 - `maxGeneration::Integer`: number of iterations before algorithm stops.
-- `costFunction::Function`: function used to calculate cost of single solution, should have signature func(resultMatrix::Array{Float64, 2}).
+- `costFunction::Function`: function used to calculate cost of single solution, should have signature func(resultMatrix::Array{Float32, 2}).
 """
 function initPopulation(config::Config, maxGeneration::Int, costFunction::Function, isTestRun::Bool=false, numberOfSeparatePopulations::Int=1)
     validate!(config)
@@ -86,7 +86,7 @@ function initPopulation(config::Config, maxGeneration::Int, costFunction::Functi
     bestChromosom = copy(chromosomSet[1])
 
     # to draw plots
-    vec = Vector{Float64}()
+    vec = Vector{Float32}()
     if isTestRun
         # getCost() removed
         push!(vec, bestChromosom.cost)
@@ -96,7 +96,7 @@ function initPopulation(config::Config, maxGeneration::Int, costFunction::Functi
 
     partialPopulationsData = getPartialPopulationsData(config, numberOfSeparatePopulations)
 
-    fittness = Vector{Float64}(undef, length(chromosomSet))
+    fittness = Vector{Float32}(undef, length(chromosomSet))
 
     parentsToPick = sum(partialPopulationsData[i][3] for i in 1 : length(partialPopulationsData))
     parents = Vector{Chromosom}(undef, parentsToPick)
@@ -197,7 +197,7 @@ function selection!(self::Population, parentsToPick::Int)
     _calcFittness!(self)
 
     Threads.@threads for i = 1 : parentsToPick
-        pick = rand()
+        pick = rand(Float32)
         idx = findfirst(x -> x <= pick, self.fittness)
         if idx === nothing
             idx = length(self.chromosomSet)
@@ -228,7 +228,7 @@ function islandSelection!(self::Population, firstIdx::Int, lastIdx::Int, parents
     end
 
     for i = parentsIdx : parentsIdx + parentsToPick - 1
-        pick = rand()
+        pick = rand(Float32)
 
         selectedIdx = lastIdx
         for idx = firstIdx : lastIdx
@@ -260,8 +260,8 @@ function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
         self.tmpChromosomeSet[i] = self.parents[i]
         self.tmpChromosomeSet[i+1] = self.parents[i+1]
         for j = 0 : 1
-            if rand() <= self.config.mutationProb
-                if rand() <= 0.5
+            if rand(Float32) <= self.config.mutationProb
+                if rand(Float32) <= Float32(0.5)
                     mutate2!(self.tmpChromosomeSet[i+j], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
                 else
                     mutate!(self.tmpChromosomeSet[i+j], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
@@ -279,8 +279,8 @@ function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
             self.tmpChromosomeSet[i] = copy(self.chromosomSet[selected_idx])
         end
 
-        if rand() <= self.config.mutationProb
-            if rand() <= 0.5
+        if rand(Float32) <= self.config.mutationProb
+            if rand(Float32) <= Float32(0.5)
                 mutate2!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
             else
                 mutate!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
@@ -331,8 +331,8 @@ function islandNextGeneration!(self::Population, firstIdx::Int, lastIdx::Int, pa
     end
 
     for i = firstIdx : lastIdx
-        if rand() <= self.config.mutationProb
-            if rand() <= 0.5
+        if rand(Float32) <= self.config.mutationProb
+            if rand(Float32) <= 0.5
                 mutate2!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
             else
                 mutate!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)

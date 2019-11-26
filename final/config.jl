@@ -37,14 +37,14 @@ const ISLAND_MODE = 2
     Structure used to store all population parameters.
 """
 mutable struct Config
-    mutationProb::Float64 # [0,1]
-    mutationRate::Float64 # [0,1]
-    crossoverProb::Float64 # [0,1]
+    mutationProb::Float32 # [0,1]
+    mutationRate::Float32 # [0,1]
+    crossoverProb::Float32 # [0,1]
     populationSize::Int # > 1
-    eliteProc::Float64 # % of best chromosoms which will be coppied to next generation
-    costMatrix::Array{Float64, 2}
-    demand::Vector{Float64}
-    supply::Vector{Float64}
+    eliteProc::Float32 # % of best chromosoms which will be coppied to next generation
+    costMatrix::Array{Float32, 2}
+    demand::Vector{Float32}
+    supply::Vector{Float32}
     mode::Int
     numberOfSeparateGenerations::Int # number of generations before joining all populations
     validated::Bool
@@ -149,17 +149,17 @@ function validate!(self::Config)
         return true
     end
 
-    if self.mutationProb < 0.0 || self.mutationProb > 1.0
+    if self.mutationProb < Float32(0.0) || self.mutationProb > Float32(1.0)
         error("Wrong mutationProb value ($(self.mutationProb)). It must be between 0 and 1.")
         return false
     end
 
-    if self.mutationRate < 0.0 || self.mutationRate > 1.0
+    if self.mutationRate < Float32(0.0) || self.mutationRate > Float32(1.0)
         error("Wrong mutationRate value ($(self.mutationRate)). It must be between 0 and 1.")
         return false
     end
 
-    if self.crossoverProb < 0.0 || self.crossoverProb > 1.0
+    if self.crossoverProb < Float32(0.0) || self.crossoverProb > Float32(1.0)
         error("Wrong crossoverProb value ($(self.crossoverProb)). It must be between 0 and 1.")
         return false
     end
@@ -169,12 +169,12 @@ function validate!(self::Config)
         return false
     end
 
-    if self.eliteProc < 0.0 || self.eliteProc > 1.0
+    if self.eliteProc < Float32(0.0) || self.eliteProc > Float32(1.0)
         error("Wrong eliteProc value.")
         return false
     end
 
-    if self.eliteProc + self.crossoverProb > 1.0
+    if self.eliteProc + self.crossoverProb > Float32(1.0)
         error("eliteProc + crossoverProb must be between 0 and 1.")
         return false
     end
@@ -201,7 +201,7 @@ end
 """
     Initializes new config struct with values passed in arguments.
 """
-function initConfig(mutationProb::Float64, mutationRate::Float64, crossoverProb::Float64, populationSize::Int, eliteProc::Float64, costMatrix::Array{Float64, 2}, demand::Vector{Float64}, supply::Vector{Float64}, mode::Int, numberOfSeparateGenerations::Int)
+function initConfig(mutationProb::Float32, mutationRate::Float32, crossoverProb::Float32, populationSize::Int, eliteProc::Float32, costMatrix::Array{Float32, 2}, demand::Vector{Float32}, supply::Vector{Float32}, mode::Int, numberOfSeparateGenerations::Int)
     config = Config(mutationProb, mutationRate, crossoverProb, populationSize, eliteProc, costMatrix, demand, supply, mode, numberOfSeparateGenerations, false)
     validate!(config)
     return config
@@ -222,17 +222,17 @@ function loadConfig(filename::String)
         return nothing
     end
 
-    demand = Vector{Float64}(undef, length(configDict["demand"]))
+    demand = Vector{Float32}(undef, length(configDict["demand"]))
     for d in configDict["demand"]
         demand[d["i"]] = d["val"]
     end
 
-    supply = Vector{Float64}(undef, length(configDict["supply"]))
+    supply = Vector{Float32}(undef, length(configDict["supply"]))
     for d in configDict["supply"]
         supply[d["i"]] = d["val"]
     end
 
-    costMatrix = Array{Float64, 2}(undef, length(demand), length(supply))
+    costMatrix = Array{Float32, 2}(undef, length(demand), length(supply))
     for d in configDict["costMatrix"]
         costMatrix[d["d"], d["s"]] = d["val"]
     end
@@ -318,14 +318,14 @@ end
 
 # TEST
 function testSaveLoad()
-    demand = [1.0, 10.0]
-    supply = [1.0, 5.0, 5.0]
-    costMatrix = [1.0 2.0 3.0; 10.0 20.0 30.0]
-    mutationProb = 0.1
-    mutationRate = 0.05
-    crossoverProb = 0.2
+    demand = Vector{Float32}([1.0, 10.0])
+    supply = Vector{Float32}([1.0, 5.0, 5.0])
+    costMatrix = Vector{Float32}([1.0 2.0 3.0; 10.0 20.0 30.0])
+    mutationProb = Float32(0.1)
+    mutationRate = Float32(0.05)
+    crossoverProb = Float32(0.2)
     populationSize = 100
-    eliteProc = 0.3
+    eliteProc = Float32(0.3)
     mode = REGULAR_MODE
     numberOfSeparateGenerations = 100
 

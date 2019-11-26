@@ -5,14 +5,14 @@ Functions:
     - Base.isless(self::Chromosom, other::Chromosom)
     
     - getCost(self::Chromosom, costFunc::Function) -> Float
-    - init(_demand::Vector{Float64}, _supply::Vector{Float64}) -> Chromosom
-    - initArray(demand::Vector{Float64}, supply::Vector{Float64}) -> Array{Float64, 2}
+    - init(_demand::Vector{Float32}, _supply::Vector{Float32}) -> Chromosom
+    - initArray(demand::Vector{Float32}, supply::Vector{Float32}) -> Array{Float32, 2}
     - eval!(self::Chromosom, costFunc::Function)
-    - mutate(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float64}, nDemand::Int=2, nSupply::Int=2)
-    - mutate!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float64}, nDemand::Int=2, nSupply::Int=2)
+    - mutate(self::Chromosom, demand::Vector{Float32}, supply::Vector{Float32}, nDemand::Int=2, nSupply::Int=2)
+    - mutate!(self::Chromosom, demand::Vector{Float32}, supply::Vector{Float32}, nDemand::Int=2, nSupply::Int=2)
     - cross(self::Chromosom, other::Chromosom)
     - cross!(self::Chromosom, other::Chromosom)
-    - validate(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float64}, delta::Float64=0.0000000001)
+    - validate(self::Chromosom, demand::Vector{Float32}, supply::Vector{Float32}, delta::Float32=0.0000000001)
 """
 
 
@@ -20,8 +20,8 @@ Functions:
     Struct to represent single chromosom for genetic algorithm.
 """
 mutable struct Chromosom
-    result::Array{Float64, 2}
-    cost::Float64
+    result::Array{Float32, 2}
+    cost::Float32
     isCalculated::Bool
 end
 
@@ -57,20 +57,20 @@ end
 """
     Initialization of new chromosom for given demand and supply vectors
 """
-function init(_demand::Vector{Float64}, _supply::Vector{Float64})
+function init(_demand::Vector{Float32}, _supply::Vector{Float32})
     demand = copy(_demand)
     supply = copy(_supply)
 
     result = initArray(demand, supply)
 
-    return Chromosom(result, 0.0, false)
+    return Chromosom(result, zero(Float32), false)
 end
 
 """
     Initialization of chromosom's result Array. (it is also useed is mutation operator)
 """
-function initArray(demand::Vector{Float64}, supply::Vector{Float64})
-    result = Array{Float64, 2}(undef, length(demand), length(supply))
+function initArray(demand::Vector{Float32}, supply::Vector{Float32})
+    result = Array{Float32, 2}(undef, length(demand), length(supply))
 
     indices = vec([(i,j) for i in 1 : length(demand), j in 1 : length(supply)])
     shuffle!(indices)
@@ -84,13 +84,13 @@ function initArray(demand::Vector{Float64}, supply::Vector{Float64})
     return result
 end
 
-function initArray2(demand::Vector{Float64}, supply::Vector{Float64})
-    result = Array{Float64, 2}(undef, length(demand), length(supply))
+function initArray2(demand::Vector{Float32}, supply::Vector{Float32})
+    result = Array{Float32, 2}(undef, length(demand), length(supply))
 
     indices = vec([(i,j) for i in 1 : length(demand), j in 1 : length(supply)])
     shuffle!(indices)
     for idx in indices
-        val = min(demand[idx[1]], supply[idx[2]]) * rand()
+        val = min(demand[idx[1]], supply[idx[2]]) * rand(Float32)
         result[idx[1], idx[2]] = val
         demand[idx[1]] -= val
         supply[idx[2]] -= val
@@ -120,7 +120,7 @@ end
 """
     Mutation operator - creates copy of a self::Chromosom.
 """
-function mutate(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float64}, nDemand::Int=2, nSupply::Int=2)
+function mutate(self::Chromosom, demand::Vector{Float32}, supply::Vector{Float32}, nDemand::Int=2, nSupply::Int=2)
     chromosomCopy = copy(self)
     mutate!(chromosomCopy, demand, supply, nDemand, nSupply)
     return chromosomCopy
@@ -130,7 +130,7 @@ end
     In-place mutation operator.
 nDemand and nSupply tells about size of newly initialized array(default 2x2).
 """
-function mutate!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float64}, nDemand::Int=2, nSupply::Int=2)
+function mutate!(self::Chromosom, demand::Vector{Float32}, supply::Vector{Float32}, nDemand::Int=2, nSupply::Int=2)
     self.isCalculated = false
 
     demandPerm = collect(1:length(demand))
@@ -141,8 +141,8 @@ function mutate!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float6
     shuffle!(supplyPerm)
     supplyPerm = supplyPerm[1:nSupply]
 
-    partialDemand = Vector{Float64}(undef, nDemand)
-    partialSupply = Vector{Float64}(undef, nSupply)
+    partialDemand = Vector{Float32}(undef, nDemand)
+    partialSupply = Vector{Float32}(undef, nSupply)
 
     for i = 1 : nDemand
         partialDemand[i] = sum(self.result[demandPerm[i], j] for j in supplyPerm)
@@ -163,7 +163,7 @@ function mutate!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float6
     return nothing
 end
 
-function mutate2!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float64}, nDemand::Int=2, nSupply::Int=2)
+function mutate2!(self::Chromosom, demand::Vector{Float32}, supply::Vector{Float32}, nDemand::Int=2, nSupply::Int=2)
     self.isCalculated = false
 
     demandPerm = collect(1:length(demand))
@@ -174,8 +174,8 @@ function mutate2!(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float
     shuffle!(supplyPerm)
     supplyPerm = supplyPerm[1:nSupply]
 
-    partialDemand = Vector{Float64}(undef, nDemand)
-    partialSupply = Vector{Float64}(undef, nSupply)
+    partialDemand = Vector{Float32}(undef, nDemand)
+    partialSupply = Vector{Float32}(undef, nSupply)
 
     for i = 1 : nDemand
         partialDemand[i] = sum(self.result[demandPerm[i], j] for j in supplyPerm)
@@ -212,11 +212,11 @@ end
 function cross!(self::Chromosom, other::Chromosom)
     self.isCalculated = false
     other.isCalculated = false
-    X = Array{Float64, 2}(undef, size(self.result))
-    Y = Array{Float64, 2}(undef, size(self.result))
+    X = Array{Float32, 2}(undef, size(self.result))
+    Y = Array{Float32, 2}(undef, size(self.result))
 
-    c1 = rand()
-    c2 = 1.0 - c1
+    c1 = rand(Float32)
+    c2 = one(Float32) - c1
     @. X = c1 * self.result + c2 * other.result
     @. Y = c1 * other.result + c2 * self.result
     self.result = X
@@ -225,7 +225,7 @@ function cross!(self::Chromosom, other::Chromosom)
     return nothing
 end
 
-function getSizeForMutation(self::Chromosom, param::Float64)
+function getSizeForMutation(self::Chromosom, param::Float32)
     nDemand = round(Int, size(self.result)[1] * param)
     nSupply = round(Int, size(self.result)[2] * param)
     
@@ -242,9 +242,9 @@ end
 """
     Check if chromosom fits as solution.
 """
-function validate(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float64}, delta::Float64=0.0000001)
+function validate(self::Chromosom, demand::Vector{Float32}, supply::Vector{Float32}, delta::Float32=Float32(0.001))
     for i = 1 : length(demand)
-        sumVal = 0.0
+        sumVal = zero(Float32)
         for j = 1 : length(supply)
             sumVal += self.result[i, j]
         end
@@ -255,7 +255,7 @@ function validate(self::Chromosom, demand::Vector{Float64}, supply::Vector{Float
     end
 
     for j = 1 : length(supply)
-        sumVal = 0.0
+        sumVal = zero(Float32)
         for i = 1 : length(demand)
             sumVal += self.result[i, j]
         end
