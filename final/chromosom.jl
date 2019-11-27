@@ -212,15 +212,19 @@ end
 function cross!(self::Chromosom, other::Chromosom)
     self.isCalculated = false
     other.isCalculated = false
-    X = Array{Float64, 2}(undef, size(self.result))
-    Y = Array{Float64, 2}(undef, size(self.result))
+    # X = Array{Float64, 2}(undef, size(self.result))
+    # Y = Array{Float64, 2}(undef, size(self.result))
 
     c1 = rand()
     c2 = 1.0 - c1
-    @. X = c1 * self.result + c2 * other.result
-    @. Y = c1 * other.result + c2 * self.result
-    self.result = X
-    other.result = Y
+    # @. X = c1 * self.result + c2 * other.result
+    # @. Y = c1 * other.result + c2 * self.result
+    # self.result = X
+    # other.result = Y
+
+    for i in 1: length(self.result)
+        self.result[i], other.result[i] = c1 * self.result[i] + c2 * other.result[i], c1 * other.result[i] + c2 * self.result[i]
+    end
 
     return nothing
 end
