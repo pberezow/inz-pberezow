@@ -41,4 +41,4 @@ end
 
 run(true)
 println("\n\n")
-run()
+@time run()

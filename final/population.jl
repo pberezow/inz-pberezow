@@ -179,9 +179,9 @@ end
 
 function _calcFittness!(self::Population)
     # getCost() removed
-    self.fittness[length(self.chromosomSet)] = self.chromosomSet[length(self.chromosomSet)].cost
+    self.fittness[length(self.chromosomSet)] = 1.0 / self.chromosomSet[length(self.chromosomSet)].cost
     for i = length(self.chromosomSet)-1 : -1 : 1
-        self.fittness[i] = self.chromosomSet[i].cost + self.fittness[i+1]
+        self.fittness[i] = 1.0 / self.chromosomSet[i].cost + self.fittness[i+1]
     end
 
     #2
@@ -196,7 +196,7 @@ function selection!(self::Population, parentsToPick::Int)
     
     _calcFittness!(self)
 
-    Threads.@threads for i = 1 : parentsToPick
+    for i = 1 : parentsToPick
         pick = rand()
         idx = findfirst(x -> x <= pick, self.fittness)
         if idx === nothing
@@ -209,13 +209,15 @@ function selection!(self::Population, parentsToPick::Int)
 end
 
 function _calcPartialFittness!(self::Population, firstIdx::Int, lastIdx::Int)
-    self.fittness[lastIdx] = self.chromosomSet[lastIdx].cost
+    self.fittness[lastIdx] = 1.0 / self.chromosomSet[lastIdx].cost
     for i = lastIdx-1 : -1 : firstIdx
-        self.fittness[i] = self.chromosomSet[i].cost + self.fittness[i+1]
+        self.fittness[i] = 1.0 / self.chromosomSet[i].cost + self.fittness[i+1]
     end
 
     #2
-    self.fittness ./= self.fittness[1]
+    for i = lastIdx : -1 : firstIdx
+        self.fittness[i] /= self.fittness[firstIdx]
+    end
     return nothing
 end
 
@@ -304,6 +306,54 @@ function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
     return nothing
 end
 
+# function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
+#     selection!(self, parentsToPick)
+    
+#     currIdx = 1
+#     for i = 1 : eliteCount
+#         self.tmpChromosomeSet[currIdx] = self.chromosomSet[currIdx]
+#         currIdx += 1
+#     end
+
+#     Threads.@threads for i = 1 : 2 : parentsToPick
+#         cross!(self.parents[i], self.parents[i+1])
+#         self.tmpChromosomeSet[currIdx+i-1] = self.parents[i]
+#         self.tmpChromosomeSet[currIdx+i] = self.parents[i+1]
+#     end
+#     currIdx += parentsToPick
+
+#     for i = currIdx : length(self.tmpChromosomeSet)
+#         selected_idx = rand(1 : length(self.tmpChromosomeSet))
+#         self.tmpChromosomeSet[i] = copy(self.chromosomSet[selected_idx])
+#     end
+
+#     Threads.@threads for i = 1 : length(self.tmpChromosomeSet)
+#         if rand() <= self.config.mutationProb
+#             # if rand() <= 0.5
+#             #     mutate2!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+#             # else
+#                 mutate!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+#             # end
+#         end
+#         eval!(self.tmpChromosomeSet[i], self.costFunction)
+#     end
+
+#     sort!(self.tmpChromosomeSet)
+#     # sort!(self.tmpChromosomeSet, 1, length(self.tmpChromosomeSet), QuickSort, Base.Order.Forward)
+
+#     tmp = self.chromosomSet
+#     self.chromosomSet = self.tmpChromosomeSet
+#     self.tmpChromosomeSet = tmp
+    
+#     # getCost() removed
+#     if self.bestChromosom.cost > self.chromosomSet[1].cost
+#         self.bestChromosom = copy(self.chromosomSet[1])
+#     end
+
+#     self.currGeneration += 1
+#     return nothing
+# end
+
 function islandNextGeneration!(self::Population, firstIdx::Int, lastIdx::Int, parentsToPick::Int, eliteCount::Int, partialDataIdx::Int)
     islandSelection!(self, firstIdx, lastIdx, parentsToPick, partialDataIdx)
     
@@ -332,11 +382,11 @@ function islandNextGeneration!(self::Population, firstIdx::Int, lastIdx::Int, pa
 
     for i = firstIdx : lastIdx
         if rand() <= self.config.mutationProb
-            if rand() <= 0.5
-                mutate2!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
-            else
+            # if rand() <= 0.5
+            #     mutate2!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+            # else
                 mutate!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
-            end
+            # end
         end
         eval!(self.tmpChromosomeSet[i], self.costFunction)
     end

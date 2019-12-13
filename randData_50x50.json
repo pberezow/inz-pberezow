@@ -1,11 +1,11 @@
 {
-    "populationSize": 10000,
+    "populationSize": 400,
+    "eliteProc": 0.0,
+    "mutationProb": 0.4,
+    "mutationRate": 0.08,
     "crossoverProb": 0.7,
-    "eliteProc": 0.3,
-    "mutationProb": 0.1,
-    "mutationRate": 0.1,
-    "mode": "regular",
-    "numberOfSeparateGenerations": 1,
+    "mode": "island",
+    "numberOfSeparateGenerations": 50,
     "demand": [
         {
             "val": 13.698630136986301,

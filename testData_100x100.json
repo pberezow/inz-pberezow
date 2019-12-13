@@ -1,9 +1,11 @@
 {
-    "populationSize": 500,
-    "crossoverProb": 0.8,
-    "eliteProc": 0.1,
-    "mutationProb": 0.05,
+    "populationSize": 400,
+    "eliteProc": 0.0,
+    "mutationProb": 0.4,
     "mutationRate": 0.05,
+    "crossoverProb": 0.7,
+    "mode": "island",
+    "numberOfSeparateGenerations": 50,
     "demand": [
         {
             "val": 17.761989342806395,

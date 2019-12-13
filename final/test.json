@@ -1,0 +1,65 @@
+{
+    "populationSize": 100,
+    "mode": "regular",
+    "crossoverProb": 0.2,
+    "numberOfSeparateGenerations": 100,
+    "demand": [
+        {
+            "val": 1.0,
+            "i": 1
+        },
+        {
+            "val": 10.0,
+            "i": 2
+        }
+    ],
+    "supply": [
+        {
+            "val": 1.0,
+            "i": 1
+        },
+        {
+            "val": 5.0,
+            "i": 2
+        },
+        {
+            "val": 5.0,
+            "i": 3
+        }
+    ],
+    "mutationRate": 0.05,
+    "eliteProc": 0.3,
+    "mutationProb": 0.1,
+    "costMatrix": [
+        {
+            "val": 1.0,
+            "s": 1,
+            "d": 1
+        },
+        {
+            "val": 2.0,
+            "s": 2,
+            "d": 1
+        },
+        {
+            "val": 3.0,
+            "s": 3,
+            "d": 1
+        },
+        {
+            "val": 10.0,
+            "s": 1,
+            "d": 2
+        },
+        {
+            "val": 20.0,
+            "s": 2,
+            "d": 2
+        },
+        {
+            "val": 30.0,
+            "s": 3,
+            "d": 2
+        }
+    ]
+}

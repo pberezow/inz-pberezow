@@ -235,6 +235,7 @@ function loadConfig(filename::String)
     costMatrix = Array{Float64, 2}(undef, length(demand), length(supply))
     for d in configDict["costMatrix"]
         costMatrix[d["d"], d["s"]] = d["val"]
+        # println("D:", d["d"], "  S:", d["s"], "  V:", d["val"])
     end
 
     mode = WRONG_MODE
@@ -257,6 +258,9 @@ function loadConfig(filename::String)
                     false)
     validate!(config)
 
+    # println(config.costMatrix)
+    # println(config.demand)
+    # println(config.supply)
     return config
 end
 

@@ -217,6 +217,8 @@ function cross!(self::Chromosom, other::Chromosom)
 
     c1 = rand()
     c2 = 1.0 - c1
+    # c1 = 0.5
+    # c2 = 1.0 - c1
     # @. X = c1 * self.result + c2 * other.result
     # @. Y = c1 * other.result + c2 * self.result
     # self.result = X
