@@ -28,7 +28,7 @@ mutable struct Population
     tmpChromosomeSet::Vector{Chromosom}
 end
 
-function runGA(configFile::String, maxGeneration::Int, costFunctionName::String, isTestRun::Bool=false) 
+function runGA(configFile::String, maxGeneration::Int, costFunctionName::String, isTestRun::Bool=false, setupCostFile::String="") 
     config = loadConfig(configFile)
 
     println("==================== CONFIG ====================")
@@ -38,7 +38,7 @@ function runGA(configFile::String, maxGeneration::Int, costFunctionName::String,
     println()
 
 
-    functionsDict = getFunctions(config.costMatrix)
+    functionsDict = getFunctions(config.costMatrix, setupCostFile)
     costFunc = functionsDict[costFunctionName]
 
     population = nothing

@@ -1,7 +1,7 @@
 include("geneticPackage.jl")
 import .GeneticNTP
 
-if length(ARGS) < 3 || length(ARGS) > 4
+if length(ARGS) < 3 || length(ARGS) > 5
     error("Wrong arguments!")
 end
 
@@ -20,6 +20,11 @@ if length(ARGS) == 4
 end
 const isTestRun = _isTestRun
 
+setupCostFile = ""
+if length(ARGS) == 5
+    setupCostFile = ARGS[5]
+end
+
 println("Path: ", configFile)
 
 println("Running on ", Threads.nthreads(), " threads")
@@ -27,9 +32,9 @@ println("Running on ", Threads.nthreads(), " threads")
 function run(precompile::Bool=false)
     t1 = time()
     if precompile
-        result = GeneticNTP.runGA(configFile, 2, costFuncName, false)
+        result = GeneticNTP.runGA(configFile, 2, costFuncName, false, setupCostFile)
     else
-        result = GeneticNTP.runGA(configFile, maxGeneration, costFuncName, isTestRun)
+        result = GeneticNTP.runGA(configFile, maxGeneration, costFuncName, isTestRun, setupCostFile)
     end
     t2 = time()
 

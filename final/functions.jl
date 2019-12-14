@@ -5,7 +5,7 @@ Each function gets costMatrix + some additional parameters(optional)
     which can be use as costFunction in Population struct.
 """
 
-function getFunctions(costMatrix::Array{Float64, 2}, param::Float64=2.0) 
+function getFunctions(costMatrix::Array{Float64, 2}, setupCostFile::String="", param::Float64=2.0) 
     dict = Dict{String, Function}()
 
     dict["Linear"] = makeLinear(costMatrix)
@@ -15,6 +15,10 @@ function getFunctions(costMatrix::Array{Float64, 2}, param::Float64=2.0)
     dict["D"] = makeD(costMatrix)
     dict["E"] = makeE(5.0, costMatrix)
     dict["F"] = makeF(5.0, costMatrix)
+
+    if setupCostFile != ""
+        dict["SetupCost"] = makeSetupCost(costMatrix, setupCostFile)
+    end
 
     return dict
 end
@@ -130,4 +134,32 @@ function makeF(param::Float64, costMatrix::Array{Float64, 2})
     end
     
     return f
+end
+
+function makeSetupCost(costMatrix::Array{Float64, 2}, setupCostMatrix::Array{Float64, 2}, delta::Float64=0.0000000001)
+
+    f = function(resultMatrix::Array{Float64, 2})
+        result = 0.0
+        for i = 1:length(resultMatrix)
+            if resultMatrix[i] > delta
+                result += resultMatrix[i] * costMatrix[i] + setupCostMatrix[i]
+            else
+                # nothing
+            end
+        end
+        return result
+    end
+
+    return f
+end
+
+function makeSetupCost(costMatrix::Array{Float64, 2}, setupCostFile::String, delta::Float64=0.0000000001)
+
+    setupCostMatrix = loadSetupCostMatrix(setupCostFile)
+    if size(setupCostMatrix) != size(costMatrix)
+        error("Wrong size of setupCostMatrix or costMatrix!")
+        nothing
+    end
+
+    return makeSetupCost(costMatrix, setupCostMatrix, delta)
 end

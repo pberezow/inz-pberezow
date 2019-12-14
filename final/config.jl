@@ -320,6 +320,49 @@ function saveConfig(config::Config, filename::String)
     return true
 end
 
+function saveSetupCostMatrix(matrix::Array{Float64, 2}, filename::String)
+    mSize = size(matrix)
+    dict = Dict()
+    dict["demandLength"] = mSize[1]
+    dict["supplyLength"] = mSize[2]
+
+    matrixList = Vector{Dict{String, Any}}(undef, length(matrix))
+    idx = 1
+    for i = 1 : size(matrix)[1]
+        for j = 1 : size(matrix)[2]
+            matrixList[idx] = Dict("d" => i, "s" => j, "val" => matrix[i, j])
+            idx += 1
+        end
+    end
+    dict["costMatrix"] = matrixList
+
+    open(filename, "w") do f
+        JSON.print(f, dict, 4)
+    end
+
+    true
+end
+
+function loadSetupCostMatrix(filename::String)
+    txt = ""
+    open(filename, "r") do f
+        txt = read(f, String)
+    end
+    dict = JSON.parse(txt)
+
+    if dict["demandLength"] * dict["supplyLength"] != length(dict["costMatrix"])
+        error("Wrong size of costMatrix($(length(dict["costMatrix"]))).")
+        return nothing
+    end
+
+    costMatrix = Array{Float64, 2}(undef, dict["demandLength"], dict["supplyLength"])
+    for d in dict["costMatrix"]
+        costMatrix[d["d"], d["s"]] = d["val"]
+    end
+
+    return costMatrix
+end
+
 # TEST
 function testSaveLoad()
     demand = [1.0, 10.0]
