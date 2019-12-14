@@ -1,4 +1,5 @@
 using JuMP, GLPK, Ipopt
+using CPLEX
 GeneticNTP = include("geneticPackage.jl")
 
 function optimize(configFile::String, solver::String, costFunction::String, param::Float64=2.0, setupCostFile::String="")
@@ -20,7 +21,6 @@ function optimize(configFile::String, solver::String, costFunction::String, para
         println("Using Ipopt...")
         model = Model(with_optimizer(Ipopt.Optimizer))
     elseif solver == "CPLEX"
-        using CPLEX
         println("Using CPLEX...")
         model = Model(with_optimizer(CPLEX.Optimizer))
     else
@@ -91,4 +91,10 @@ if length(ARGS) > 3
     param = tryparse(Float64, ARGS[4])
 end
 
-optimize(configFile, solver, costFunction, param)
+setupCostFile = ""
+if length(ARGS) > 4
+    setupCostFile = ARGS[5]
+end
+
+
+optimize(configFile, solver, costFunction, param, setupCostFile)

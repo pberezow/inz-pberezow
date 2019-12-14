@@ -15,15 +15,16 @@ end
 const costFuncName = ARGS[3]
 
 _isTestRun = false
-if length(ARGS) == 4
+if length(ARGS) > 3 && ARGS[4] == "true"
     _isTestRun = true
 end
 const isTestRun = _isTestRun
 
-setupCostFile = ""
-if length(ARGS) == 5
-    setupCostFile = ARGS[5]
+_setupCostFile = ""
+if length(ARGS) > 4
+    _setupCostFile = ARGS[5]
 end
+const setupCostFile = _setupCostFile
 
 println("Path: ", configFile)
 
