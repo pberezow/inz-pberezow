@@ -1,5 +1,4 @@
 include("geneticPackage.jl")
-using GeneticNTP
 
 function findParams(configFile::String, costFuncName::String, outFile::String, setupCostFile::String="")
     # parameters
@@ -9,13 +8,13 @@ function findParams(configFile::String, costFuncName::String, outFile::String, s
     mutProb = [0.05, 0.1, 0.2]
     mutRate = [0.03, 0.05, 0.1]
     elite = [0.3, 0.1, 0.0]
-    mode = [REGULAR_MODE]
+    mode = [GeneticNTP.REGULAR_MODE]
     separateGen = [1]
 
     tries = 5
-    config = loadConfig(configFile)
+    config = GeneticNTP.loadConfig(configFile)
 
-    functionsDict = getFunctions(config.costMatrix, setupCostFile)
+    functionsDict = GeneticNTP.getFunctions(config.costMatrix, setupCostFile)
     costFunc = functionsDict[costFuncName]
 
     # csv with structure:
@@ -46,13 +45,13 @@ function findParams(configFile::String, costFuncName::String, outFile::String, s
                                             result = -1.0
                                             
                                             t1 = time()
-                                            if config.mode == REGULAR_MODE
-                                                population = initPopulation(config, mG, costFunc, false, 1)
-                                                result = findSolution(population)
+                                            if config.mode == GeneticNTP.REGULAR_MODE
+                                                population = GeneticNTP.initPopulation(config, mG, costFunc, false, 1)
+                                                result = GeneticNTP.findSolution(population)
                                                 
-                                            elseif config.mode == ISLAND_MODE
-                                                population = initPopulation(config, maxGeneration, costFunc, isTestRun, Threads.nthreads())
-                                                result = findSolution(population)
+                                            elseif config.mode == GeneticNTP.ISLAND_MODE
+                                                population = GeneticNTP.initPopulation(config, mG, costFunc, false, Threads.nthreads())
+                                                result = GeneticNTP.findSolution(population)
                                             
                                             end
                                             t2 = time()
