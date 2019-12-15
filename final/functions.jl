@@ -43,6 +43,7 @@ end
 function makeA(param::Float64, costMatrix::Array{Float64, 2})
     
     f = function(resultMatrix::Array{Float64, 2})
+        # return sum(costMatrix[d,s] * (atan(1000*(resultMatrix[d,s]-2))/pi + 0.5 + atan(1000*(resultMatrix[d,s]-4))/pi + 0.5 + atan(1000*(resultMatrix[d,s]-6))/pi + 0.5 + atan(1000*(resultMatrix[d,s]-8))/pi + 0.5 + atan(1000*(resultMatrix[d,s]-10))/pi + 0.5) for d in 1:size(costMatrix)[1], s in 1:size(costMatrix)[2])
         result = 0.0
         for i = 1:length(costMatrix)
             if resultMatrix[i] <= param

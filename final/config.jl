@@ -363,6 +363,159 @@ function loadSetupCostMatrix(filename::String)
     return costMatrix
 end
 
+function generateGAMSInput(config::Config, filename::String, costFuncName::String, setupCostFile::String="")
+    implementedFunctions = ["Linear", "A", "B", "C", "D", "E", "F", "SetupCost"]
+
+    if !(costFuncName in implementedFunctions)
+        error("Wrong function name! use one from $(implementedFunctions).")
+        false
+    end
+
+    setupCostMatrix = nothing
+    if setupCostFile != ""
+        setupCostMatrix = loadSetupCostMatrix(setupCostFile)
+        if size(setupCostMatrix) != size(config.costMatrix)
+            error("Wrong size of setupCostMatrix or costMatrix!")
+            nothing
+        end
+    end
+
+    open(filename, "w") do f
+        write(f, "\$offDigit\n")
+        # Supply and Demand Sets
+        # d - demand
+        # s - supply
+        write(f, "Sets\n")
+        
+        write(f, "    d    demand    / ")
+        write(f, "d1")
+        for i in 2:length(config.demand)
+            write(f, ", d$i")
+        end
+        write(f, " /\n")
+        
+        write(f, "    s    supply    / ")
+        write(f, "s1")
+        for i in 2:length(config.supply)
+            write(f, ", s$i")
+        end
+        write(f, " / ;\n")
+
+
+        # Parameters (vectors + cost matrix)
+        write(f, "Parameters\n")
+        
+        write(f, "    demand(d)    demand in point d    / ")
+        write(f, "d1  $(config.demand[1])")
+        for i in 2:length(config.demand)
+            write(f, ", d$i  $(config.demand[i])")
+        end
+        write(f, " /\n")
+        
+        write(f, "    supply(s)    supply in point s    / ")
+        write(f, "s1  $(config.supply[1])")
+        for i in 2:length(config.supply)
+            write(f, ", s$i  $(config.supply[i])")
+        end
+        write(f, " /\n")
+
+        if costFuncName == "SetupCost"
+            # add setupCost parameters
+            write(f, "    setupCostMatrix(d, s)    / ")
+            for d in 1:length(config.demand)
+                for s in 1:length(config.supply)
+                    if d == 1 && s == 1
+                        write(f, "d$d .s$s  $(setupCostMatrix[d, s])")
+                    else
+                        write(f, ", d$d .s$s  $(setupCostMatrix[d, s])")
+                    end
+                end
+            end
+            write(f, " /\n")
+        end
+
+        write(f, "    costMatrix(d, s)    / ")
+        for d in 1:length(config.demand)
+            for s in 1:length(config.supply)
+                if d == 1 && s == 1
+                    write(f, "d$d .s$s  $(config.costMatrix[d, s])")
+                else
+                    write(f, ", d$d .s$s  $(config.costMatrix[d, s])")
+                end
+            end
+        end
+        write(f, " / ;\n")
+
+        if costFuncName == "SetupCost"
+            write(f, "Scalar M ;\nM = sum(d, demand(d)) + sum(s, supply(s)) ;\n")
+        end
+
+        # Variables (x[d, s] + result)
+        write(f, "Variables\n")
+        
+        write(f, "    x(d, s)    resultMatrix\n")
+        if costFuncName == "SetupCost"
+            write(f, "    y(d, s)    bin values for setupCost\n")
+        end
+        write(f, "    result    objective value ;\n")
+        write(f, "Positive variables x ;\n")
+        if costFuncName == "SetupCost"
+            write(f, "Binary variables y ;\n")
+        end
+
+        # Equations
+        write(f, "Equations\n")
+        write(f, "    demEq(d)    demand limit for point d\n")
+        write(f, "    supEq(s)    supply limit for point s\n")
+        if costFuncName == "SetupCost"
+            write(f, "    setC(d,s)    setup cost eq\n")
+        end
+        write(f, "    cost    objective function ;\n")
+        
+        write(f, "demEq(d) ..    sum(s, x(d,s)) =e= demand(d) ;\n")
+        write(f, "supEq(s) ..    sum(d, x(d,s)) =e= supply(s) ;\n")
+        if costFuncName == "Linear"
+            write(f, "cost ..    result  =e=  sum((d,s), costMatrix(d,s)*x(d,s)) ;\n")
+            write(f, "Model transport /all/ ;\n")
+            write(f, "Solve transport using LP minimizing result ;")
+        elseif costFuncName == "A"
+            # Pa = 1000 S = 2
+            write(f, "cost ..    result  =e=  sum((d,s), costMatrix(d,s) * (arctan(1000*(x(d,s)-2))/Pi + 0.5 + arctan(1000*(x(d,s)-4))/Pi + 0.5 + arctan(1000*(x(d,s)-6))/Pi + 0.5 + arctan(1000*(x(d,s)-8))/Pi + 0.5 + arctan(1000*(x(d,s)-10))/Pi + 0.5)) ;\n")
+            write(f, "Model transport /all/ ;\n")
+            write(f, "Solve transport using NLP minimizing result ;")
+        elseif costFuncName == "B"
+            # Pb = 1000 S = 5
+            write(f, "cost ..    result  =e= sum((d,s), costMatrix(d,s) * ((x(d,s)/5) * (arctan(1000*x(d,s))/Pi + 0.5) + (1 - x(d,s)/5) * (arctan(1000*(x(d,s) - 5))/Pi + 0.5) + (x(d,s)/5 - 2) * (arctan(1000*(x(d,s) - 2 * 5))/Pi + 0.5))) ;\n")
+            write(f, "Model transport /all/ ;\n")
+            write(f, "Solve transport using NLP minimizing result ;")
+        elseif costFuncName == "C"
+            write(f, "cost ..    result  =e=  sum((d,s), costMatrix(d,s) * power(x(d,s), 2)) ;\n")
+            write(f, "Model transport /all/ ;\n")
+            write(f, "Solve transport using NLP minimizing result ;")
+        elseif costFuncName == "D"
+            write(f, "cost ..    result  =e=  sum((d,s), costMatrix(d,s) * sqrt(x(d,s))) ;\n")
+            write(f, "Model transport /all/ ;\n")
+            write(f, "Solve transport using NLP minimizing result ;")
+        elseif costFuncName == "E"
+            write(f, "cost ..    result  =e=  sum((d,s), costMatrix(d,s) * (1/(1 + power((x(d,s) - 2*5), 2)) + 1/(1 + power((x(d,s) - 9/4*5), 2)) + 1/(1 + power((x(d,s) - 7/4*5), 2)))) ;\n")
+            write(f, "Model transport /all/ ;\n")
+            write(f, "Solve transport using NLP minimizing result ;")
+        elseif costFuncName == "F"
+            # can be bugged - last /5
+            write(f, "cost ..    result  =e=  sum((d,s), costMatrix(d,s) * x(d,s) * (sin(x(d,s)*5*Pi/4/5) + 1)) ;\n")
+            write(f, "Model transport /all/ ;\n")
+            write(f, "Solve transport using NLP minimizing result ;")
+        elseif costFuncName == "SetupCost"
+            write(f, "setC(d,s) ..    x(d,s) =l= y(d,s) * M ;\n")
+            write(f, "cost ..    result  =e=  sum((d,s), costMatrix(d,s)*x(d,s)) + sum((d,s), setupCostMatrix(d,s)*y(d,s)) ;\n")
+            write(f, "Model transport /all/ ;\n")
+            write(f, "Solve transport using MIP minimizing result ;")
+        end
+    end
+
+    true
+end
+
 # TEST
 function testSaveLoad()
     demand = [1.0, 10.0]

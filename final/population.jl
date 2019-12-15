@@ -263,11 +263,11 @@ function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
         self.tmpChromosomeSet[i+1] = self.parents[i+1]
         for j = 0 : 1
             if rand() <= self.config.mutationProb
-                if rand() <= 0.5
-                    mutate2!(self.tmpChromosomeSet[i+j], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
-                else
+                # if rand() <= 0.5
+                #     mutate2!(self.tmpChromosomeSet[i+j], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+                # else
                     mutate!(self.tmpChromosomeSet[i+j], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
-                end
+                # end
             end
             eval!(self.tmpChromosomeSet[i+j], self.costFunction)
         end
@@ -282,11 +282,11 @@ function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
         end
 
         if rand() <= self.config.mutationProb
-            if rand() <= 0.5
-                mutate2!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
-            else
+            # if rand() <= 0.5
+            #     mutate2!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+            # else
                 mutate!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
-            end
+            # end
         end
         eval!(self.tmpChromosomeSet[i], self.costFunction)
     end

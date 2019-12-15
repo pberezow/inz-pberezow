@@ -2,10 +2,34 @@ module Generators
 
     using Random
     using JSON
+    using Distributions
 
-    export genDataWthZerosDiagonal
+    export genDataWthZerosDiagonal, genMatrix, genVector
 
     include("final/config.jl")
+# type::Type, populationSize::Int, eliteProc::Float64, mutationProb::Float64, mutationRate::Float64, crossoverProb::Float64, mode::Int, numberOfSeparateGenerations::Int
+    function genMatrix(meanVal::Float64, stdVal::Float64, maxVal::Float64, size::Tuple{Int,Int})
+        r = Normal(meanVal, stdVal)
+        tr = Truncated(r, 0.0, maxVal)
+        matrix = rand(tr, size[1], size[2])
+        # matrix32 = Float32.(matrix)
+
+        return matrix
+    end
+
+    function genVector(sumVal::Float64, stdVal::Float64, vecLength::Int)
+        # vec = Vector{Float64}(undef, vecLength)
+
+        r = Normal(sumVal/vecLength, stdVal)
+        tr = Truncated(r, 0.0, 100.0)
+        rArr = rand(tr, vecLength)
+        s = sum(rArr)
+
+        # for i = 1 : vecLength
+        vec = sumVal * rArr / s
+        # end
+        return vec
+    end
 
     function genDataWthZerosDiagonal(filename::String, mutationProb::Float64, crossoverProb::Float64, populationSize::Int, eliteProc::Float64, demandLength::Int, supplyLength::Int, costMaxVal::Float64, sumOfVectorValues::Float64)
         demand, supply, costMatrix = genDataWthZerosDiagonal(demandLength, supplyLength, costMaxVal, sumOfVectorValues)
