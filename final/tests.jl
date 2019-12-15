@@ -2,12 +2,12 @@ include("geneticPackage.jl")
 
 function findParams(configFile::String, costFuncName::String, outFile::String, setupCostFile::String="")
     # parameters
-    maxGen = [1000, 10000, 20000]
-    popSize = [100, 400]
-    crossProb = [0.2, 0.5, 0.7]
-    mutProb = [0.05, 0.1, 0.2]
-    mutRate = [0.03, 0.05, 0.1]
-    elite = [0.3, 0.1, 0.0]
+    maxGen = [10000]
+    popSize = [100]
+    crossProb = [0.2]
+    mutProb = [0.05]
+    mutRate = [0.03]
+    elite = [0.3]
     mode = [GeneticNTP.REGULAR_MODE]
     separateGen = [1]
 
@@ -47,11 +47,11 @@ function findParams(configFile::String, costFuncName::String, outFile::String, s
                                             t1 = time()
                                             if config.mode == GeneticNTP.REGULAR_MODE
                                                 population = GeneticNTP.initPopulation(config, mG, costFunc, false, 1)
-                                                result = GeneticNTP.findSolution(population)
+                                                result = GeneticNTP.findSolution(population).cost
                                                 
                                             elseif config.mode == GeneticNTP.ISLAND_MODE
                                                 population = GeneticNTP.initPopulation(config, mG, costFunc, false, Threads.nthreads())
-                                                result = GeneticNTP.findSolution(population)
+                                                result = GeneticNTP.findSolution(population).cost
                                             
                                             end
                                             t2 = time()
