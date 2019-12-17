@@ -17,6 +17,28 @@ module Generators
         return matrix
     end
 
+    function genMatrix(minVal::Float64, maxVal::Float64, size::Tuple{Int, Int})
+        matrix = rand(minVal:0.001:maxVal, size...)
+        return matrix
+    end
+
+    function genVector(vecLength::Int, vecSum::Int, step::Int=10, minVal::Int=1)
+        vec = ones(Int, vecLength)
+        
+        while(sum(vec) < vecSum)
+            idx = rand(1:vecLength)
+            vec[idx] += rand(1:step)
+        end
+        while(sum(vec) != vecSum)
+            idx = rand(1:vecLength)
+            if vec[idx] > minVal
+                vec[idx] -= 1
+            end
+        end
+
+        return vec
+    end
+
     function genVector(sumVal::Float64, stdVal::Float64, vecLength::Int)
         # vec = Vector{Float64}(undef, vecLength)
 

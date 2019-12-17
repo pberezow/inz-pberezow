@@ -137,7 +137,7 @@ function makeF(param::Float64, costMatrix::Array{Float64, 2})
     return f
 end
 
-function makeSetupCost(costMatrix::Array{Float64, 2}, setupCostMatrix::Array{Float64, 2}, delta::Float64=0.0000000001)
+function makeSetupCost(costMatrix::Array{Float64, 2}, setupCostMatrix::Array{Float64, 2}, delta::Float64=0.0001)
 
     f = function(resultMatrix::Array{Float64, 2})
         result = 0.0

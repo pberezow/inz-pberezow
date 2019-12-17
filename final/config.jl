@@ -63,9 +63,11 @@ function genCFunctionAndData(config::Config, outFile::String, maxGeneration::Int
     end
 
     open(outFile, "w") do f
-        write(f, "$(length(config.costMatrix))\t$(length(config.demand) + length(config.supply))\t0\t$(length(config.costMatrix))\n")
+        write(f, "$(length(config.costMatrix))\t$(length(config.demand) + length(config.supply) - 1)\t$(length(config.costMatrix))\t$(length(config.costMatrix))\n")
+        write(f, "\n")
+        
         # equations
-        for i = 1 : length(config.demand)
+        for i = 2 : length(config.demand)
             for s = 1 : length(config.supply)
                 for d = 1 : length(config.demand)
                     if d == i
@@ -90,9 +92,21 @@ function genCFunctionAndData(config::Config, outFile::String, maxGeneration::Int
             end
             write(f, "$(config.supply[i])\n")
         end
+        write(f, "\n")
 
         # inequalities
-        # none
+        for i = 1 : length(config.costMatrix)
+            for j = 1 : length(config.costMatrix)
+                if i == j
+                    write(f, "-1.0 ")
+                else
+                    write(f, "0.0 ")
+                end
+            end
+            write(f, "0.0\n")
+        end
+        write(f, "\n")
+
         # domain for variables
         idx = 1
         for s = 1 : length(config.supply)
@@ -101,34 +115,43 @@ function genCFunctionAndData(config::Config, outFile::String, maxGeneration::Int
                 idx += 1
             end
         end
+        write(f, "\n")
 
         # population size and number of generations
         write(f, "$(config.populationSize)\t$maxGeneration\n")
+        write(f, "\n")
 
         # frequencies of 7 operators (default = 4 each)
         write(f, "4\t4\t4\t4\t4\t4\t4\n")
+        write(f, "\n")
 
         # (the coeficient q for cumulative probability distribution;
         # higher q values provide stronger selective pressure;
         # standard value 0.1 is very reasonable for a population
         # size 70). 
         write(f, "0.1\n")
-
+        write(f, "\n")
+        
         # (1 is for maximization problem, 0 for minimization).
         write(f, "0\n")
+        write(f, "\n")
 
         # (0 for a start from a random pupulation, 1 for a start
         # from a single point, i.e., all individuals in the 
         # initial population are identical). If the system has
         # difficulties in finding feasible points, it will
         # prompt you for these (see note below, for parameter TRIES).
-        write(f, "0\n")
+        # write(f, "0\n")
+        # write(f, "\n")
+        # ONLY IN GENOCOP 3
 
         # (a parameter for non-uniform mutation; should stay as 6).
         write(f, "6\n")
+        write(f, "\n")
 
         # (a parameter for simple crossover, leave it as it is).
         write(f, "10\n")
+        write(f, "\n")
 
         # the number of your test-case; any integer would do. It is
         # convenient if your eval.c file contains several test cases:
@@ -424,27 +447,27 @@ function generateGAMSInput(config::Config, filename::String, costFuncName::Strin
             write(f, "    setupCostMatrix(d, s)    / ")
             for d in 1:length(config.demand)
                 for s in 1:length(config.supply)
-                    if d == 1 && s == 1
-                        write(f, "d$d .s$s  $(setupCostMatrix[d, s])")
+                    if d == length(config.demand) && s == length(config.supply)
+                        write(f, "d$d .s$s  $(setupCostMatrix[d, s]) /")
                     else
-                        write(f, ", d$d .s$s  $(setupCostMatrix[d, s])")
+                        write(f, " d$d .s$s  $(setupCostMatrix[d, s])\n")
                     end
                 end
             end
-            write(f, " /\n")
+            write(f, " \n")
         end
 
         write(f, "    costMatrix(d, s)    / ")
         for d in 1:length(config.demand)
             for s in 1:length(config.supply)
-                if d == 1 && s == 1
-                    write(f, "d$d .s$s  $(config.costMatrix[d, s])")
+                if d == length(config.demand) && s == length(config.supply)
+                    write(f, "d$d .s$s  $(config.costMatrix[d, s]) /;")
                 else
-                    write(f, ", d$d .s$s  $(config.costMatrix[d, s])")
+                    write(f, " d$d .s$s  $(config.costMatrix[d, s])\n")
                 end
             end
         end
-        write(f, " / ;\n")
+        write(f, " \n")
 
         if costFuncName == "SetupCost"
             write(f, "Scalar M ;\nM = sum(d, demand(d)) + sum(s, supply(s)) ;\n")

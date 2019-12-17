@@ -1,5 +1,5 @@
 using JuMP, GLPK, Ipopt
-using CPLEX
+# using CPLEX
 GeneticNTP = include("geneticPackage.jl")
 
 function optimize(configFile::String, solver::String, costFunction::String, param::Float64=2.0, setupCostFile::String="")
