@@ -54,6 +54,13 @@ function runGA(configFile::String, maxGeneration::Int, costFunctionName::String,
     result = findSolution(population)
     
     if isTestRun
+        # open("res.txt", "w") do f
+        #     write(f, "y = [")
+        #     for res in population.bestsVector
+        #         write(f, "$res, ")
+        #     end
+        #     write(f, "]\n")
+        # end
         drawResults(population, "resultPlot.png")
     end
     
@@ -354,7 +361,7 @@ end
 #     return nothing
 # end
 
-function islandNextGeneration!(self::Population, firstIdx::Int, lastIdx::Int, parentsToPick::Int, eliteCount::Int, partialDataIdx::Int)
+function islandNextGeneration!(self::Population, firstIdx::Int, lastIdx::Int, parentsToPick::Int, eliteCount::Int, partialDataIdx::Int, mutex::Threads.SpinLock)
     islandSelection!(self, firstIdx, lastIdx, parentsToPick, partialDataIdx)
     
     currIdx = firstIdx
@@ -396,7 +403,13 @@ function islandNextGeneration!(self::Population, firstIdx::Int, lastIdx::Int, pa
     for i = firstIdx : lastIdx
         self.chromosomSet[i], self.tmpChromosomeSet[i] = self.tmpChromosomeSet[i], self.chromosomSet[i]
     end
-    
+
+    if self.bestChromosom.cost > self.chromosomSet[firstIdx].cost
+        lock(mutex)
+        self.bestChromosom = copy(self.chromosomSet[firstIdx])
+        unlock(mutex)
+    end
+
     return nothing
 end
 
@@ -405,7 +418,12 @@ function nextGenerationTest!(self::Population, parentsToPick::Int, eliteCount::I
     # getCost() removed
     push!(self.bestsVector, self.chromosomSet[1].cost)
     if self.currGeneration % 1000 == 0
-        println("Generation: ", self.currGeneration)
+        meanVal = 0.0
+        for i = 1 : length(self.chromosomSet)
+            meanVal += self.chromosomSet[i].cost
+        end
+        meanVal /= length(self.chromosomSet)
+        println("Generation: ", self.currGeneration, "  Best: ", self.chromosomSet[1].cost, "  Mean: ", meanVal, "  Worse: ", self.chromosomSet[length(self.chromosomSet)].cost)
     end
 
     return nothing
@@ -423,13 +441,14 @@ function findSolution(population::Population)
             end
         elseif population.config.mode == ISLAND_MODE
             # TEST - ISLAND MODE
+            mutex = Threads.SpinLock()
             while population.currGeneration < population.maxGeneration
                 shuffle!(population.chromosomSet)
                 
                 Threads.@threads for i = 1 : length(population.partialPopulationsData)
                     sort!(population.chromosomSet, population.partialPopulationsData[i][1], population.partialPopulationsData[i][2], QuickSort, Base.Order.Forward)
                     for j = 1 : population.config.numberOfSeparateGenerations
-                        islandNextGeneration!(population, population.partialPopulationsData[i]..., i)
+                        islandNextGeneration!(population, population.partialPopulationsData[i]..., i, mutex)
                     end
                 end
                 population.currGeneration += population.config.numberOfSeparateGenerations
@@ -450,13 +469,14 @@ function findSolution(population::Population)
             end
         elseif population.config.mode == ISLAND_MODE
             # ISLAND MODE
+            mutex = Threads.SpinLock()
             while population.currGeneration < population.maxGeneration
                 shuffle!(population.chromosomSet)
                 
                 Threads.@threads for i = 1 : length(population.partialPopulationsData)
                     sort!(population.chromosomSet, population.partialPopulationsData[i][1], population.partialPopulationsData[i][2], QuickSort, Base.Order.Forward)
                     for j = 1 : population.config.numberOfSeparateGenerations
-                        islandNextGeneration!(population, population.partialPopulationsData[i]..., i)
+                        islandNextGeneration!(population, population.partialPopulationsData[i]..., i, mutex)
                     end
                 end
                 population.currGeneration += population.config.numberOfSeparateGenerations

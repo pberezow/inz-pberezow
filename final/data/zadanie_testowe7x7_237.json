@@ -1,8 +1,8 @@
 {
-    "populationSize": 400,
+    "populationSize": 100,
     "mutationProb": 0.1,
     "mutationRate": 0.05,
-    "crossoverProb": 0.6,
+    "crossoverProb": 0.7,
     "eliteProc": 0.3,
     "mode": "regular",
     "numberOfSeparateGenerations": 1,

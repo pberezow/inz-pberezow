@@ -1,8 +1,8 @@
 {
-    "populationSize": 400,
-    "mode": "regular",
+    "populationSize": 40,
+    "mode": "island",
     "crossoverProb": 0.7,
-    "numberOfSeparateGenerations": 1,
+    "numberOfSeparateGenerations": 50,
     "demand": [
         {
             "val": 144.0,

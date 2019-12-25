@@ -3,6 +3,7 @@ module GeneticNTP
     using Random
     using JSON
     using PyPlot
+    using Distributions
 
     export 
         # chromosom.jl

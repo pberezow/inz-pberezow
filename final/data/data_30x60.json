@@ -1,8 +1,8 @@
 {
-    "populationSize": 400,
-    "mode": "regular",
-    "crossoverProb": 0.7,
-    "numberOfSeparateGenerations": 1,
+    "populationSize": 100,
+    "mode": "island",
+    "crossoverProb": 0.5,
+    "numberOfSeparateGenerations": 50,
     "demand": [
         {
             "val": 481.0,
@@ -368,8 +368,8 @@
         }
     ],
     "mutationRate": 0.05,
-    "eliteProc": 0.3,
-    "mutationProb": 0.1,
+    "eliteProc": 0.5,
+    "mutationProb": 0.4,
     "costMatrix": [
         {
             "val": 8.169,

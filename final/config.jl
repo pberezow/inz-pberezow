@@ -65,7 +65,7 @@ function genCFunctionAndData(config::Config, outFile::String, maxGeneration::Int
     open(outFile, "w") do f
         write(f, "$(length(config.costMatrix))\t$(length(config.demand) + length(config.supply) - 1)\t$(length(config.costMatrix))\t$(length(config.costMatrix))\n")
         write(f, "\n")
-        
+
         # equations
         for i = 2 : length(config.demand)
             for s = 1 : length(config.supply)
@@ -386,7 +386,65 @@ function loadSetupCostMatrix(filename::String)
     return costMatrix
 end
 
-function generateGAMSInput(config::Config, filename::String, costFuncName::String, setupCostFile::String="")
+function generateGenetic2Input(config::Config, filename::String, maxGenerations::Int, setupCostFile::String="", costFuncName::String="")
+    implementedFunctions = ["Linear", "A", "B", "C", "D", "E", "F", "SetupCost"]
+
+    if !(costFuncName in implementedFunctions)
+        error("Wrong function name! use one from $(implementedFunctions).")
+        false
+    end
+
+    setupCostMatrix = nothing
+    if setupCostFile != ""
+        setupCostMatrix = loadSetupCostMatrix(setupCostFile)
+        if size(setupCostMatrix) != size(config.costMatrix)
+            error("Wrong size of setupCostMatrix or costMatrix!")
+            nothing
+        end
+    end
+
+    open(filename, "w") do f
+        write(f, "nsource\t$(length(config.supply))\n")
+        write(f, "ndest\t$(length(config.demand))\n")
+        write(f, "sources\n")
+        for i = 1 : length(config.supply)
+            write(f, "$(config.supply[i]) ")
+        end
+        write(f, "\n")
+        for i = 1 : length(config.demand)
+            write(f, "$(config.demand[i]) ")
+        end
+        write(f, "\n")
+
+        for s = 1 : length(config.supply)
+            for d = 1 : length(config.demand)
+                write(f, "$(config.costMatrix[d, s]) ")
+            end
+            write(f, "\n")
+        end
+
+        write(f, "optimum\t0.0\n")
+
+        write(f, "pop\t$(config.populationSize)\n")
+
+        write(f, "cross\t$(floor(Int, config.populationSize/2 * config.crossoverProb))\n")
+        write(f, "inver\t0\n\n")
+
+        write(f, "mutat\t$(floor(Int, config.populationSize*config.mutationProb))\n")
+        write(f, "cross_1\t0.65\n")
+        write(f, "cross_2\t0.35\n\n")
+
+        write(f, "sprob\t0.9\n")
+        write(f, "it\t$(maxGenerations)\n")
+        write(f, "fixed\t0.0\n")
+
+        write(f, "run\t200\nseed\t1\n")
+        write(f, "run\t201\nseed\t1313\n")
+        write(f, "\nend")
+    end
+end
+
+function generateGAMSInput(config::Config, filename::String, costFuncName::String, setupCostFile::String="", timeLimit::Int=3600)
     implementedFunctions = ["Linear", "A", "B", "C", "D", "E", "F", "SetupCost"]
 
     if !(costFuncName in implementedFunctions)
@@ -500,38 +558,46 @@ function generateGAMSInput(config::Config, filename::String, costFuncName::Strin
         if costFuncName == "Linear"
             write(f, "cost ..    result  =e=  sum((d,s), costMatrix(d,s)*x(d,s)) ;\n")
             write(f, "Model transport /all/ ;\n")
+            write(f, "transport.resLim=$(timeLimit);\n")
             write(f, "Solve transport using LP minimizing result ;")
         elseif costFuncName == "A"
             # Pa = 1000 S = 2
             write(f, "cost ..    result  =e=  sum((d,s), costMatrix(d,s) * (arctan(1000*(x(d,s)-2))/Pi + 0.5 + arctan(1000*(x(d,s)-4))/Pi + 0.5 + arctan(1000*(x(d,s)-6))/Pi + 0.5 + arctan(1000*(x(d,s)-8))/Pi + 0.5 + arctan(1000*(x(d,s)-10))/Pi + 0.5)) ;\n")
             write(f, "Model transport /all/ ;\n")
+            write(f, "transport.resLim=$(timeLimit);\n")
             write(f, "Solve transport using NLP minimizing result ;")
         elseif costFuncName == "B"
             # Pb = 1000 S = 5
             write(f, "cost ..    result  =e= sum((d,s), costMatrix(d,s) * ((x(d,s)/5) * (arctan(1000*x(d,s))/Pi + 0.5) + (1 - x(d,s)/5) * (arctan(1000*(x(d,s) - 5))/Pi + 0.5) + (x(d,s)/5 - 2) * (arctan(1000*(x(d,s) - 2 * 5))/Pi + 0.5))) ;\n")
             write(f, "Model transport /all/ ;\n")
+            write(f, "transport.resLim=$(timeLimit);\n")
             write(f, "Solve transport using NLP minimizing result ;")
         elseif costFuncName == "C"
             write(f, "cost ..    result  =e=  sum((d,s), costMatrix(d,s) * power(x(d,s), 2)) ;\n")
             write(f, "Model transport /all/ ;\n")
+            write(f, "transport.resLim=$(timeLimit);\n")
             write(f, "Solve transport using NLP minimizing result ;")
         elseif costFuncName == "D"
             write(f, "cost ..    result  =e=  sum((d,s), costMatrix(d,s) * sqrt(x(d,s))) ;\n")
             write(f, "Model transport /all/ ;\n")
+            write(f, "transport.resLim=$(timeLimit);\n")
             write(f, "Solve transport using NLP minimizing result ;")
         elseif costFuncName == "E"
             write(f, "cost ..    result  =e=  sum((d,s), costMatrix(d,s) * (1/(1 + power((x(d,s) - 2*5), 2)) + 1/(1 + power((x(d,s) - 9/4*5), 2)) + 1/(1 + power((x(d,s) - 7/4*5), 2)))) ;\n")
             write(f, "Model transport /all/ ;\n")
+            write(f, "transport.resLim=$(timeLimit);\n")
             write(f, "Solve transport using NLP minimizing result ;")
         elseif costFuncName == "F"
             # can be bugged - last /5
             write(f, "cost ..    result  =e=  sum((d,s), costMatrix(d,s) * x(d,s) * (sin(x(d,s)*5*Pi/4/5) + 1)) ;\n")
             write(f, "Model transport /all/ ;\n")
+            write(f, "transport.resLim=$(timeLimit);\n")
             write(f, "Solve transport using NLP minimizing result ;")
         elseif costFuncName == "SetupCost"
             write(f, "setC(d,s) ..    x(d,s) =l= y(d,s) * M ;\n")
             write(f, "cost ..    result  =e=  sum((d,s), costMatrix(d,s)*x(d,s)) + sum((d,s), setupCostMatrix(d,s)*y(d,s)) ;\n")
             write(f, "Model transport /all/ ;\n")
+            write(f, "transport.resLim=$(timeLimit);\n")
             write(f, "Solve transport using MIP minimizing result ;")
         end
     end
