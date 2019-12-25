@@ -1,6 +1,8 @@
 """
 File contains Population struct, which represents population of chromosoms.
 Functions:
+    - runEA(configFile::String, maxGeneration::Int, costFunctionName::String, isTestRun::Bool=false, setupCostFile::String="")
+
     - initPopulation(config::Config, maxGeneration::Int, costFunction::Function)
     - selection(self::Population)
     - nextGeneration!(self::Population)
@@ -28,13 +30,23 @@ mutable struct Population
     tmpChromosomeSet::Vector{Chromosom}
 end
 
-function runGA(configFile::String, maxGeneration::Int, costFunctionName::String, isTestRun::Bool=false, setupCostFile::String="") 
+
+"""
+    Runs evolutionary algorithm with parameters and model defined in configFile, max generation equals maxGeneration argument and 
+        cost function name corresponding to costFunctionName argument.
+    If isTestRun parameter is set as true, then evolution of best chromosome will be plot and save in resultPlot.png file.
+"""
+function runEA(configFile::String, maxGeneration::Int, costFunctionName::String, isTestRun::Bool=false, setupCostFile::String="") 
     config = loadConfig(configFile)
 
     println("==================== CONFIG ====================")
-    println("Population Size: ", config.populationSize, " Crossover: ", config.crossoverProb, " Mutation: ", config.mutationProb, " Elite: ", config.eliteProc, " Iterations: ", maxGeneration)
+    println("Population Size: ", config.populationSize)
+    println("Crossover: ", config.crossoverProb*100, "%") 
+    println("Mutation: ", config.mutationProb*100, "% / rate: ", config.mutationRate) 
+    println("Elite: ", config.eliteProc*100, "%") 
+    println("Iterations: ", maxGeneration)
     println("Cost Func: ", costFunctionName)
-    println("Test Run: ", isTestRun)
+    println("Is Test Run: ", isTestRun)
     println()
 
 
@@ -47,38 +59,25 @@ function runGA(configFile::String, maxGeneration::Int, costFunctionName::String,
     elseif config.mode == ISLAND_MODE
         population = initPopulation(config, maxGeneration, costFunc, isTestRun, Threads.nthreads())
     else
-        error()
+        error("Wrong algorithm mode!")
     end
     println("Best result in first generation: ", population.bestChromosom.cost)
 
     result = findSolution(population)
     
     if isTestRun
-        # open("res.txt", "w") do f
-        #     write(f, "y = [")
-        #     for res in population.bestsVector
-        #         write(f, "$res, ")
-        #     end
-        #     write(f, "]\n")
-        # end
         drawResults(population, "resultPlot.png")
     end
     
     if !validate(result, config.demand, config.supply)
-        error("Error while performing mutation.")
+        error("Found solution doesn't fit model.")
     end
+
     return result
 end
 
 """
-    initPopulation(config, maxGeneration, costFunction)
-
-Initializes new population.
-
-# Arguments
-- `config::Config`: Config struct including all population's parameters.
-- `maxGeneration::Integer`: number of iterations before algorithm stops.
-- `costFunction::Function`: function used to calculate cost of single solution, should have signature func(resultMatrix::Array{Float64, 2}).
+    Initializes new population.
 """
 function initPopulation(config::Config, maxGeneration::Int, costFunction::Function, isTestRun::Bool=false, numberOfSeparatePopulations::Int=1)
     validate!(config)
@@ -95,7 +94,6 @@ function initPopulation(config::Config, maxGeneration::Int, costFunction::Functi
     # to draw plots
     vec = Vector{Float64}()
     if isTestRun
-        # getCost() removed
         push!(vec, bestChromosom.cost)
     end
 
@@ -112,6 +110,7 @@ function initPopulation(config::Config, maxGeneration::Int, costFunction::Functi
 
     return Population(config, 1, maxGeneration, chromosomSet, bestChromosom, costFunction, vec, isTestRun, nDemand, nSupply, partialPopulationsData, fittness, parents, tmpChromosomSet)
 end
+
 
 function getPartialPopulationsData(config::Config, numberOfSeparatePopulations::Int)
     size = floor(Int, config.populationSize / numberOfSeparatePopulations)
@@ -185,13 +184,11 @@ function getPartialPopulationsData(config::Config, numberOfSeparatePopulations::
 end
 
 function _calcFittness!(self::Population)
-    # getCost() removed
     self.fittness[length(self.chromosomSet)] = 1.0 / self.chromosomSet[length(self.chromosomSet)].cost
     for i = length(self.chromosomSet)-1 : -1 : 1
         self.fittness[i] = 1.0 / self.chromosomSet[i].cost + self.fittness[i+1]
     end
 
-    #2
     self.fittness ./= self.fittness[1]
     return nothing
 end
@@ -254,12 +251,7 @@ function islandSelection!(self::Population, firstIdx::Int, lastIdx::Int, parents
 end
 
 """
-    nextGeneration!(self)
-
-Performs single iteration of genetic algorithm.
-
-# Arguments
-- `self::Population`: evolving population.
+    Performs single iteration of regular model evolutionary algorithm.
 """
 function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
     selection!(self, parentsToPick)
@@ -270,11 +262,11 @@ function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
         self.tmpChromosomeSet[i+1] = self.parents[i+1]
         for j = 0 : 1
             if rand() <= self.config.mutationProb
-                # if rand() <= 0.5
-                #     mutate2!(self.tmpChromosomeSet[i+j], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
-                # else
+                if rand() <= 0.5
+                    mutate2!(self.tmpChromosomeSet[i+j], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+                else
                     mutate!(self.tmpChromosomeSet[i+j], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
-                # end
+                end
             end
             eval!(self.tmpChromosomeSet[i+j], self.costFunction)
         end
@@ -289,11 +281,11 @@ function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
         end
 
         if rand() <= self.config.mutationProb
-            # if rand() <= 0.5
-            #     mutate2!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
-            # else
+            if rand() <= 0.5
+                mutate2!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+            else
                 mutate!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
-            # end
+            end
         end
         eval!(self.tmpChromosomeSet[i], self.costFunction)
     end
@@ -304,7 +296,6 @@ function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
     self.chromosomSet = self.tmpChromosomeSet
     self.tmpChromosomeSet = tmp
     
-    # getCost() removed
     if self.bestChromosom.cost > self.chromosomSet[1].cost
         self.bestChromosom = copy(self.chromosomSet[1])
     end
@@ -313,54 +304,10 @@ function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
     return nothing
 end
 
-# function nextGeneration!(self::Population, parentsToPick::Int, eliteCount::Int)
-#     selection!(self, parentsToPick)
-    
-#     currIdx = 1
-#     for i = 1 : eliteCount
-#         self.tmpChromosomeSet[currIdx] = self.chromosomSet[currIdx]
-#         currIdx += 1
-#     end
 
-#     Threads.@threads for i = 1 : 2 : parentsToPick
-#         cross!(self.parents[i], self.parents[i+1])
-#         self.tmpChromosomeSet[currIdx+i-1] = self.parents[i]
-#         self.tmpChromosomeSet[currIdx+i] = self.parents[i+1]
-#     end
-#     currIdx += parentsToPick
-
-#     for i = currIdx : length(self.tmpChromosomeSet)
-#         selected_idx = rand(1 : length(self.tmpChromosomeSet))
-#         self.tmpChromosomeSet[i] = copy(self.chromosomSet[selected_idx])
-#     end
-
-#     Threads.@threads for i = 1 : length(self.tmpChromosomeSet)
-#         if rand() <= self.config.mutationProb
-#             # if rand() <= 0.5
-#             #     mutate2!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
-#             # else
-#                 mutate!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
-#             # end
-#         end
-#         eval!(self.tmpChromosomeSet[i], self.costFunction)
-#     end
-
-#     sort!(self.tmpChromosomeSet)
-#     # sort!(self.tmpChromosomeSet, 1, length(self.tmpChromosomeSet), QuickSort, Base.Order.Forward)
-
-#     tmp = self.chromosomSet
-#     self.chromosomSet = self.tmpChromosomeSet
-#     self.tmpChromosomeSet = tmp
-    
-#     # getCost() removed
-#     if self.bestChromosom.cost > self.chromosomSet[1].cost
-#         self.bestChromosom = copy(self.chromosomSet[1])
-#     end
-
-#     self.currGeneration += 1
-#     return nothing
-# end
-
+"""
+    Performs single iteration of island model evolutionary algorithm.
+"""
 function islandNextGeneration!(self::Population, firstIdx::Int, lastIdx::Int, parentsToPick::Int, eliteCount::Int, partialDataIdx::Int, mutex::Threads.SpinLock)
     islandSelection!(self, firstIdx, lastIdx, parentsToPick, partialDataIdx)
     
@@ -389,11 +336,11 @@ function islandNextGeneration!(self::Population, firstIdx::Int, lastIdx::Int, pa
 
     for i = firstIdx : lastIdx
         if rand() <= self.config.mutationProb
-            # if rand() <= 0.5
-            #     mutate2!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
-            # else
+            if rand() <= 0.5
+                mutate2!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
+            else
                 mutate!(self.tmpChromosomeSet[i], self.config.demand, self.config.supply, self.nDemand, self.nSupply)
-            # end
+            end
         end
         eval!(self.tmpChromosomeSet[i], self.costFunction)
     end
@@ -415,16 +362,18 @@ end
 
 function nextGenerationTest!(self::Population, parentsToPick::Int, eliteCount::Int)
     nextGeneration!(self, parentsToPick, eliteCount)
-    # getCost() removed
+
     push!(self.bestsVector, self.chromosomSet[1].cost)
-    if self.currGeneration % 1000 == 0
-        meanVal = 0.0
-        for i = 1 : length(self.chromosomSet)
-            meanVal += self.chromosomSet[i].cost
-        end
-        meanVal /= length(self.chromosomSet)
-        println("Generation: ", self.currGeneration, "  Best: ", self.chromosomSet[1].cost, "  Mean: ", meanVal, "  Worse: ", self.chromosomSet[length(self.chromosomSet)].cost)
-    end
+    # if self.currGeneration % 1000 == 0
+    #     meanVal = 0.0
+    #     for i = 1 : length(self.chromosomSet)
+    #         meanVal += self.chromosomSet[i].cost
+    #     end
+    #     meanVal /= length(self.chromosomSet)
+
+    #     println("Generation: ", self.currGeneration, "  Best: ", self.chromosomSet[1].cost, "  Mean: ", meanVal, "  Worse: ", self.chromosomSet[length(self.chromosomSet)].cost)
+
+    # end
 
     return nothing
 end
@@ -434,74 +383,84 @@ end
 """
 function findSolution(population::Population)
     if population.isTestRun
-        if population.config.mode == REGULAR_MODE
-            # TEST - REGULAR MODE
-            while population.currGeneration < population.maxGeneration
-                nextGenerationTest!(population, population.partialPopulationsData[1][3], population.partialPopulationsData[1][4])
-            end
-        elseif population.config.mode == ISLAND_MODE
-            # TEST - ISLAND MODE
-            mutex = Threads.SpinLock()
-            while population.currGeneration < population.maxGeneration
-                shuffle!(population.chromosomSet)
-                
-                Threads.@threads for i = 1 : length(population.partialPopulationsData)
-                    sort!(population.chromosomSet, population.partialPopulationsData[i][1], population.partialPopulationsData[i][2], QuickSort, Base.Order.Forward)
-                    for j = 1 : population.config.numberOfSeparateGenerations
-                        islandNextGeneration!(population, population.partialPopulationsData[i]..., i, mutex)
-                    end
-                end
-                population.currGeneration += population.config.numberOfSeparateGenerations
-
-                sort!(population.chromosomSet)
-                if population.bestChromosom.cost > population.chromosomSet[1].cost
-                    population.bestChromosom = copy(population.chromosomSet[1])
-                end
-                # getCost() removed
-                push!(population.bestsVector, population.chromosomSet[1].cost)
-            end
-        end
+        _findSolutionTest(population)
     else
-        if population.config.mode == REGULAR_MODE
-            # REGULAR MODE
-            while population.currGeneration < population.maxGeneration
-                nextGeneration!(population, population.partialPopulationsData[1][3], population.partialPopulationsData[1][4])
-            end
-        elseif population.config.mode == ISLAND_MODE
-            # ISLAND MODE
-            mutex = Threads.SpinLock()
-            while population.currGeneration < population.maxGeneration
-                shuffle!(population.chromosomSet)
-                
-                Threads.@threads for i = 1 : length(population.partialPopulationsData)
-                    sort!(population.chromosomSet, population.partialPopulationsData[i][1], population.partialPopulationsData[i][2], QuickSort, Base.Order.Forward)
-                    for j = 1 : population.config.numberOfSeparateGenerations
-                        islandNextGeneration!(population, population.partialPopulationsData[i]..., i, mutex)
-                    end
-                end
-                population.currGeneration += population.config.numberOfSeparateGenerations
-
-                sort!(population.chromosomSet)
-                if population.bestChromosom.cost > population.chromosomSet[1].cost
-                    population.bestChromosom = copy(population.chromosomSet[1])
-                end
-            end
-        end
+        _findSolution(population)
     end
 
     return population.bestChromosom
 end
 
+function _findSolutionTest(population::Population)
+    if population.config.mode == REGULAR_MODE
+
+        while population.currGeneration < population.maxGeneration
+            nextGenerationTest!(population, population.partialPopulationsData[1][3], population.partialPopulationsData[1][4])
+        end
+
+    elseif population.config.mode == ISLAND_MODE
+
+        mutex = Threads.SpinLock()
+
+        while population.currGeneration < population.maxGeneration
+            shuffle!(population.chromosomSet)
+            
+            Threads.@threads for i = 1 : length(population.partialPopulationsData)
+                sort!(population.chromosomSet, population.partialPopulationsData[i][1], population.partialPopulationsData[i][2], QuickSort, Base.Order.Forward)
+                for j = 1 : population.config.numberOfSeparateGenerations
+                    islandNextGeneration!(population, population.partialPopulationsData[i]..., i, mutex)
+                end
+            end
+            population.currGeneration += population.config.numberOfSeparateGenerations
+
+            sort!(population.chromosomSet)
+            if population.bestChromosom.cost > population.chromosomSet[1].cost
+                population.bestChromosom = copy(population.chromosomSet[1])
+            end
+            push!(population.bestsVector, population.chromosomSet[1].cost)
+        end
+    end
+end
+
+function _findSolution(population::Population)
+    if population.config.mode == REGULAR_MODE
+
+        while population.currGeneration < population.maxGeneration
+            nextGeneration!(population, population.partialPopulationsData[1][3], population.partialPopulationsData[1][4])
+        end
+
+    elseif population.config.mode == ISLAND_MODE
+
+        mutex = Threads.SpinLock()
+
+        while population.currGeneration < population.maxGeneration
+            shuffle!(population.chromosomSet)
+            
+            Threads.@threads for i = 1 : length(population.partialPopulationsData)
+                sort!(population.chromosomSet, population.partialPopulationsData[i][1], population.partialPopulationsData[i][2], QuickSort, Base.Order.Forward)
+                for j = 1 : population.config.numberOfSeparateGenerations
+                    islandNextGeneration!(population, population.partialPopulationsData[i]..., i, mutex)
+                end
+            end
+            population.currGeneration += population.config.numberOfSeparateGenerations
+
+            sort!(population.chromosomSet)
+            if population.bestChromosom.cost > population.chromosomSet[1].cost
+                population.bestChromosom = copy(population.chromosomSet[1])
+            end
+        end
+    end
+end
+
+
+"""
+    Plot evolution of best chromosome cost.
+"""
 function drawResults(self::Population, filename::String, runNumber::Int=-1)
     if self.currGeneration < self.maxGeneration
         println("You have to evolve population first!")
         return false
     end
-
-    # if !self.isTestRun || length(self.bestsVector) != self.maxGeneration
-    #     println("You have to set isTestRun = true during population initialization!")
-    #     return false
-    # end
 
     title = "mutProb: $(self.config.mutationProb), crossProb: $(self.config.crossoverProb), elite: $(self.config.eliteProc), popSize: $(self.config.populationSize), maxGen: $(self.maxGeneration)"
     if runNumber > 0

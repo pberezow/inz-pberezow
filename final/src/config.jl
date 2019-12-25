@@ -33,6 +33,7 @@ File contains definition of Config struct used in Population struct to set param
 const WRONG_MODE = 0
 const REGULAR_MODE = 1
 const ISLAND_MODE = 2
+
 """
     Structure used to store all population parameters.
 """
@@ -48,120 +49,6 @@ mutable struct Config
     mode::Int
     numberOfSeparateGenerations::Int # number of generations before joining all populations
     validated::Bool
-end
-
-function genCFunctionAndData(config::Config, outFile::String, maxGeneration::Int)
-
-    open("cost_function.c", "w") do f
-        write(f, "#include \"genocop.h\"\n\n")
-        write(f, "float cost_function(X)\nVECTOR X;\n{\n")
-        write(f, "return( X[1] * $(config.costMatrix[1]) ")
-        for idx = 2 : length(config.costMatrix)
-            write(f, "+ X[$idx] * $(config.costMatrix[idx]) ")
-        end
-        write(f, ");\n}")
-    end
-
-    open(outFile, "w") do f
-        write(f, "$(length(config.costMatrix))\t$(length(config.demand) + length(config.supply) - 1)\t$(length(config.costMatrix))\t$(length(config.costMatrix))\n")
-        write(f, "\n")
-
-        # equations
-        for i = 2 : length(config.demand)
-            for s = 1 : length(config.supply)
-                for d = 1 : length(config.demand)
-                    if d == i
-                        write(f, "1.0 ")
-                    else
-                        write(f, "0.0 ")
-                    end
-                end
-            end
-            write(f, "$(config.demand[i])\n")
-        end
-
-        for i = 1 : length(config.supply)
-            for s = 1 : length(config.supply)
-                for d = 1 : length(config.demand)
-                    if s == i
-                        write(f, "1.0 ")
-                    else
-                        write(f, "0.0 ")
-                    end
-                end
-            end
-            write(f, "$(config.supply[i])\n")
-        end
-        write(f, "\n")
-
-        # inequalities
-        for i = 1 : length(config.costMatrix)
-            for j = 1 : length(config.costMatrix)
-                if i == j
-                    write(f, "-1.0 ")
-                else
-                    write(f, "0.0 ")
-                end
-            end
-            write(f, "0.0\n")
-        end
-        write(f, "\n")
-
-        # domain for variables
-        idx = 1
-        for s = 1 : length(config.supply)
-            for d = 1 : length(config.demand)
-                write(f, "0.0\t$idx\t$(min(config.supply[s], config.demand[d]))\n")
-                idx += 1
-            end
-        end
-        write(f, "\n")
-
-        # population size and number of generations
-        write(f, "$(config.populationSize)\t$maxGeneration\n")
-        write(f, "\n")
-
-        # frequencies of 7 operators (default = 4 each)
-        write(f, "4\t4\t4\t4\t4\t4\t4\n")
-        write(f, "\n")
-
-        # (the coeficient q for cumulative probability distribution;
-        # higher q values provide stronger selective pressure;
-        # standard value 0.1 is very reasonable for a population
-        # size 70). 
-        write(f, "0.1\n")
-        write(f, "\n")
-        
-        # (1 is for maximization problem, 0 for minimization).
-        write(f, "0\n")
-        write(f, "\n")
-
-        # (0 for a start from a random pupulation, 1 for a start
-        # from a single point, i.e., all individuals in the 
-        # initial population are identical). If the system has
-        # difficulties in finding feasible points, it will
-        # prompt you for these (see note below, for parameter TRIES).
-        # write(f, "0\n")
-        # write(f, "\n")
-        # ONLY IN GENOCOP 3
-
-        # (a parameter for non-uniform mutation; should stay as 6).
-        write(f, "6\n")
-        write(f, "\n")
-
-        # (a parameter for simple crossover, leave it as it is).
-        write(f, "10\n")
-        write(f, "\n")
-
-        # the number of your test-case; any integer would do. It is
-        # convenient if your eval.c file contains several test cases:
-        # then you can run the system (without recompiling) and any
-        # of the test problems present in eval.c.
-        # 100 for generated cost_function
-        write(f, "100\n")
-    end
-
-    return nothing
 end
 
 """
@@ -258,7 +145,6 @@ function loadConfig(filename::String)
     costMatrix = Array{Float64, 2}(undef, length(demand), length(supply))
     for d in configDict["costMatrix"]
         costMatrix[d["d"], d["s"]] = d["val"]
-        # println("D:", d["d"], "  S:", d["s"], "  V:", d["val"])
     end
 
     mode = WRONG_MODE
@@ -281,9 +167,6 @@ function loadConfig(filename::String)
                     false)
     validate!(config)
 
-    # println(config.costMatrix)
-    # println(config.demand)
-    # println(config.supply)
     return config
 end
 
@@ -343,6 +226,10 @@ function saveConfig(config::Config, filename::String)
     return true
 end
 
+
+"""
+    Saves matrix with setup costs into file.
+"""
 function saveSetupCostMatrix(matrix::Array{Float64, 2}, filename::String)
     mSize = size(matrix)
     dict = Dict()
@@ -366,6 +253,9 @@ function saveSetupCostMatrix(matrix::Array{Float64, 2}, filename::String)
     true
 end
 
+"""
+    Loads setup costs matrix.    
+"""
 function loadSetupCostMatrix(filename::String)
     txt = ""
     open(filename, "r") do f
@@ -386,64 +276,9 @@ function loadSetupCostMatrix(filename::String)
     return costMatrix
 end
 
-function generateGenetic2Input(config::Config, filename::String, maxGenerations::Int, setupCostFile::String="", costFuncName::String="")
-    implementedFunctions = ["Linear", "A", "B", "C", "D", "E", "F", "SetupCost"]
-
-    if !(costFuncName in implementedFunctions)
-        error("Wrong function name! use one from $(implementedFunctions).")
-        false
-    end
-
-    setupCostMatrix = nothing
-    if setupCostFile != ""
-        setupCostMatrix = loadSetupCostMatrix(setupCostFile)
-        if size(setupCostMatrix) != size(config.costMatrix)
-            error("Wrong size of setupCostMatrix or costMatrix!")
-            nothing
-        end
-    end
-
-    open(filename, "w") do f
-        write(f, "nsource\t$(length(config.supply))\n")
-        write(f, "ndest\t$(length(config.demand))\n")
-        write(f, "sources\n")
-        for i = 1 : length(config.supply)
-            write(f, "$(config.supply[i]) ")
-        end
-        write(f, "\n")
-        for i = 1 : length(config.demand)
-            write(f, "$(config.demand[i]) ")
-        end
-        write(f, "\n")
-
-        for s = 1 : length(config.supply)
-            for d = 1 : length(config.demand)
-                write(f, "$(config.costMatrix[d, s]) ")
-            end
-            write(f, "\n")
-        end
-
-        write(f, "optimum\t0.0\n")
-
-        write(f, "pop\t$(config.populationSize)\n")
-
-        write(f, "cross\t$(floor(Int, config.populationSize/2 * config.crossoverProb))\n")
-        write(f, "inver\t0\n\n")
-
-        write(f, "mutat\t$(floor(Int, config.populationSize*config.mutationProb))\n")
-        write(f, "cross_1\t0.65\n")
-        write(f, "cross_2\t0.35\n\n")
-
-        write(f, "sprob\t0.9\n")
-        write(f, "it\t$(maxGenerations)\n")
-        write(f, "fixed\t0.0\n")
-
-        write(f, "run\t200\nseed\t1\n")
-        write(f, "run\t201\nseed\t1313\n")
-        write(f, "\nend")
-    end
-end
-
+"""
+    Generate GAMS file from config. Implemented for functions Linear, A, B, C, D, E, F, SetupCost.
+"""
 function generateGAMSInput(config::Config, filename::String, costFuncName::String, setupCostFile::String="", timeLimit::Int=3600)
     implementedFunctions = ["Linear", "A", "B", "C", "D", "E", "F", "SetupCost"]
 
@@ -605,7 +440,6 @@ function generateGAMSInput(config::Config, filename::String, costFuncName::Strin
     true
 end
 
-# TEST
 function testSaveLoad()
     demand = [1.0, 10.0]
     supply = [1.0, 5.0, 5.0]

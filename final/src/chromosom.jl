@@ -212,17 +212,9 @@ end
 function cross!(self::Chromosom, other::Chromosom)
     self.isCalculated = false
     other.isCalculated = false
-    # X = Array{Float64, 2}(undef, size(self.result))
-    # Y = Array{Float64, 2}(undef, size(self.result))
 
     c1 = rand()
     c2 = 1.0 - c1
-    # c1 = 0.35
-    # c2 = 1.0 - c1
-    # @. X = c1 * self.result + c2 * other.result
-    # @. Y = c1 * other.result + c2 * self.result
-    # self.result = X
-    # other.result = Y
 
     for i in 1: length(self.result)
         self.result[i], other.result[i] = c1 * self.result[i] + c2 * other.result[i], c1 * other.result[i] + c2 * self.result[i]
@@ -231,6 +223,9 @@ function cross!(self::Chromosom, other::Chromosom)
     return nothing
 end
 
+"""
+    Calculates size of matrix initialized during mutation, based on param - mutationRate.
+"""
 function getSizeForMutation(self::Chromosom, param::Float64)
     nDemand = round(Int, size(self.result)[1] * param)
     nSupply = round(Int, size(self.result)[2] * param)

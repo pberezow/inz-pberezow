@@ -1,5 +1,12 @@
-include("geneticPackage.jl")
+include("./src/GeneticNTP.jl")
 import .GeneticNTP
+
+# w celu uruchomienia podajemy:
+# 1 arg: ścieżka do pliku konfiguracyjnego
+# 2 arg: ilość pokoleń algorytmu
+# 3 arg: nazwa funkcji celu ich definicje znajduja się w pliku src/functions.jl
+# 4 arg(dodatkowy): jeśli "true", to zostanie narysowany wykres ewolucji najlepszego osobnika
+# 5 arg(dodatkowy): w przypadku wyboru funkcji celu "SetupCost" najeży podać tu ścieżkę do pliku z macierzą kosztów stałych
 
 if length(ARGS) < 3 || length(ARGS) > 5
     error("Wrong arguments!")
@@ -33,9 +40,9 @@ println("Running on ", Threads.nthreads(), " threads")
 function run(precompile::Bool=false)
     t1 = time()
     if precompile
-        result = GeneticNTP.runGA(configFile, 2, costFuncName, false, setupCostFile)
+        result = GeneticNTP.runEA(configFile, 2, costFuncName, false, setupCostFile)
     else
-        result = GeneticNTP.runGA(configFile, maxGeneration, costFuncName, isTestRun, setupCostFile)
+        result = GeneticNTP.runEA(configFile, maxGeneration, costFuncName, isTestRun, setupCostFile)
     end
     t2 = time()
 
@@ -45,6 +52,6 @@ function run(precompile::Bool=false)
     return nothing
 end
 
-run(true)
-println("\n\n")
+# run(true)
+# println("\n\n")
 @time run()

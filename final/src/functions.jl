@@ -5,6 +5,11 @@ Each function gets costMatrix + some additional parameters(optional)
     which can be use as costFunction in Population struct.
 """
 
+"""
+    Dictionary with (functionName => costFunction) items. Used in runGA() function in population.jl file.
+    If you want to add new cost function, you should define it in this file and then add to this dictionary with 
+        corresponding name. 
+"""
 function getFunctions(costMatrix::Array{Float64, 2}, setupCostFile::String="", param::Float64=2.0) 
     dict = Dict{String, Function}()
 
@@ -30,11 +35,6 @@ function makeLinear(costMatrix::Array{Float64, 2})
 
     f = function(resultMatrix::Array{Float64, 2})
         return sum(resultMatrix[i, j] * costMatrix[i, j] for i in 1:size(costMatrix)[1], j in 1:size(costMatrix)[2])
-        # result = 0.0
-        # for i = 1:length(costMatrix)
-        #     result += costMatrix[i] * resultMatrix[i]
-        # end
-        # return result
     end
 
     return f
@@ -137,7 +137,7 @@ function makeF(param::Float64, costMatrix::Array{Float64, 2})
     return f
 end
 
-function makeSetupCost(costMatrix::Array{Float64, 2}, setupCostMatrix::Array{Float64, 2}, delta::Float64=0.001)
+function makeSetupCost(costMatrix::Array{Float64, 2}, setupCostMatrix::Array{Float64, 2}, delta::Float64=0.00000001)
 
     f = function(resultMatrix::Array{Float64, 2})
         result = 0.0
@@ -154,7 +154,7 @@ function makeSetupCost(costMatrix::Array{Float64, 2}, setupCostMatrix::Array{Flo
     return f
 end
 
-function makeSetupCost(costMatrix::Array{Float64, 2}, setupCostFile::String, delta::Float64=0.0000000001)
+function makeSetupCost(costMatrix::Array{Float64, 2}, setupCostFile::String, delta::Float64=0.00000001)
 
     setupCostMatrix = loadSetupCostMatrix(setupCostFile)
     if size(setupCostMatrix) != size(costMatrix)
