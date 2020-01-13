@@ -21,14 +21,6 @@ Project is written in Julia v1.1
 - [x] Functions to draw visualizations
 - [x] Parallel version of algorithm
 - [x] Optimization
-- [ ] Final version of algorithm
+- [x] Final version of algorithm
 - [X] Comparsion with other algorithms
 
-
-## TODO2:
-- [x] Add mutation rate
-- [x] Think about other ways of creating next generation of chromosoms (selection)
-- [x] Think about other crossover operators
-- [x] Implement second mutation operator from book
-
-- [ ] Swap to Float32

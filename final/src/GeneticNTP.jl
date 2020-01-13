@@ -6,13 +6,13 @@ module GeneticNTP
 
     export 
         # chromosom.jl
-        Chromosom, getCost, validate, validate!, eval!, mutate, mutate!, cross, cross!, 
+        Chromosom, init, getCost, validate, validate!, eval!, mutate!, mutate2!, cross!, getSizeForMutation,
         # population.jl
-        Population, initPopulation, drawResults, runEA,
+        Population, initPopulation, drawResults, runEA, nextGeneration!, islandNextGeneration!, findSolution,
         # functions.jl
         getFunctions,
         # config.jl
-        Config, initConfig, loadConfig, saveConfig
+        Config, initConfig, loadConfig, saveConfig, REGULAR_MODE, ISLAND_MODE
 
     include("config.jl")
     include("chromosom.jl")

@@ -4,8 +4,6 @@ Functions:
     - runEA(configFile::String, maxGeneration::Int, costFunctionName::String, isTestRun::Bool=false, setupCostFile::String="")
 
     - initPopulation(config::Config, maxGeneration::Int, costFunction::Function)
-    - selection(self::Population)
-    - nextGeneration!(self::Population)
     - findSolution(population::Population)
 """
 
