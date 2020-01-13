@@ -1,5 +1,5 @@
 using Statistics
-include("geneticPackage.jl")
+include("src/GeneticNTP.jl")
 
 function runBestNTimes(configFile::String, costFuncName::String, outFile::String, params::Dict, nTimes::Int, setupCostFile::String="")
 

@@ -18,4 +18,5 @@ demEq(d) ..    sum(s, x(d,s)) =e= demand(d) ;
 supEq(s) ..    sum(d, x(d,s)) =e= supply(s) ;
 cost ..    result  =e=  sum((d,s), costMatrix(d,s) * (1/(1 + power((x(d,s) - 2*5), 2)) + 1/(1 + power((x(d,s) - 9/4*5), 2)) + 1/(1 + power((x(d,s) - 7/4*5), 2)))) ;
 Model transport /all/ ;
+transport.resLim=28000;
 Solve transport using NLP minimizing result ;

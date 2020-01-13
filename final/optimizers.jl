@@ -1,6 +1,6 @@
 using JuMP, GLPK, Ipopt
 # using CPLEX
-GeneticNTP = include("geneticPackage.jl")
+GeneticNTP = include("./src/GeneticNTP.jl")
 
 function optimize(configFile::String, solver::String, costFunction::String, param::Float64=2.0, setupCostFile::String="")
 
@@ -66,13 +66,6 @@ function optimize(configFile::String, solver::String, costFunction::String, para
     println("DONE.")
     println("Status: ", JuMP.termination_status(model))
     println("Result: ", JuMP.objective_value(model))
-
-    # result_solution = value.(trans)
-    # result_objective = objective_value(model)
-
-    # println("VALUE:\n", result_solution)
-    # println("\n\nLENGTH:\n", length(result_solution))
-    # println("\n\nOBJECTIVE:\n", result_objective)
 
     return nothing
 end
